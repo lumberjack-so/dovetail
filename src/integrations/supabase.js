@@ -38,22 +38,23 @@ export async function createProject(name, organizationId, options = {}) {
 
     return response.data;
   } catch (error) {
-    // Debug: Log the entire error object
-    console.error('\n=== SUPABASE ERROR DEBUG ===');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
-    console.error('Has response:', !!error.response);
+    // Build detailed error message including all debug info
+    // (console.error doesn't work in Listr2 tasks, so we put it in the error message)
+    let debugInfo = '\n\n=== DEBUG INFO ===\n';
+    debugInfo += `Error type: ${error.constructor.name}\n`;
+    debugInfo += `Error message: ${error.message}\n`;
+    debugInfo += `Has response: ${!!error.response}\n`;
 
     if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
-      console.error('Response headers:', error.response.headers);
+      debugInfo += `Status: ${error.response.status}\n`;
+      debugInfo += `Response data: ${JSON.stringify(error.response.data, null, 2)}\n`;
+      debugInfo += `Response headers: ${JSON.stringify(error.response.headers, null, 2)}\n`;
     }
 
-    if (error.request) {
-      console.error('Request was made but no response');
+    if (error.request && !error.response) {
+      debugInfo += 'Request was made but no response received\n';
     }
-    console.error('=== END DEBUG ===\n');
+    debugInfo += '=== END DEBUG ===';
 
     // Extract detailed error information from axios error
     if (error.response) {
@@ -70,13 +71,13 @@ export async function createProject(name, organizationId, options = {}) {
         errorMsg = data.message || data.error || data.msg || data.error_description || JSON.stringify(data);
       }
 
-      throw new Error(`Supabase API error (${status}): ${errorMsg}`);
+      throw new Error(`Supabase API error (${status}): ${errorMsg}${debugInfo}`);
     } else if (error.request) {
       // Request was made but no response received
-      throw new Error('No response from Supabase API - check your internet connection');
+      throw new Error(`No response from Supabase API - check your internet connection${debugInfo}`);
     } else {
       // Something else went wrong
-      throw new Error(`Supabase request failed: ${error.message}`);
+      throw new Error(`Supabase request failed: ${error.message}${debugInfo}`);
     }
   }
 }
