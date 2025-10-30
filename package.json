@@ -1,0 +1,49 @@
+{
+  "name": "dovetail-cli",
+  "version": "0.1.0",
+  "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow",
+  "main": "src/index.js",
+  "bin": {
+    "dovetail": "./bin/dovetail.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node bin/dovetail.js"
+  },
+  "keywords": [
+    "cli",
+    "pern",
+    "scaffold",
+    "workflow",
+    "automation",
+    "react",
+    "express",
+    "postgresql",
+    "node"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.12",
+    "ora": "^8.0.1",
+    "execa": "^8.0.1",
+    "fs-extra": "^11.2.0",
+    "octokit": "^3.1.2",
+    "@linear/sdk": "^24.0.0",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2",
+    "simple-git": "^3.21.0",
+    "listr2": "^8.0.0",
+    "conventional-commits-parser": "^5.0.0",
+    "slugify": "^1.6.6"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
