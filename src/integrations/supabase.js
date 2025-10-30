@@ -23,19 +23,28 @@ async function getHeaders() {
 export async function createProject(name, organizationId, options = {}) {
   const headers = await getHeaders();
 
-  const response = await axios.post(
-    `${SUPABASE_API_URL}/projects`,
-    {
-      name,
-      organization_id: organizationId,
-      db_pass: options.dbPassword || generatePassword(),
-      region: options.region || 'us-east-1',
-      plan: options.plan || 'free',
-    },
-    { headers }
-  );
+  try {
+    const response = await axios.post(
+      `${SUPABASE_API_URL}/projects`,
+      {
+        name,
+        organization_id: organizationId,
+        db_pass: options.dbPassword || generatePassword(),
+        region: options.region || 'us-east-1',
+        plan: options.plan || 'free',
+      },
+      { headers }
+    );
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    // Provide more detailed error message
+    if (error.response) {
+      const errorMsg = error.response.data?.message || error.response.data?.error || JSON.stringify(error.response.data);
+      throw new Error(`Supabase API error (${error.response.status}): ${errorMsg}`);
+    }
+    throw error;
+  }
 }
 
 /**

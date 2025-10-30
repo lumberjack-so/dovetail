@@ -2,6 +2,16 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.4] - 2025-10-30
+
+### Fixed
+- **Better Supabase Error Messages**: Improved error handling for Supabase API failures
+  - Now displays the actual error message from Supabase API
+  - Shows error code and detailed message instead of generic "Request failed with status code 400"
+  - Helps users understand what went wrong with project creation
+
+**Impact**: Users will now see clear error messages from Supabase, making it easier to diagnose and fix issues with project creation.
+
 ## [0.3.3] - 2025-10-30
 
 ### Added
