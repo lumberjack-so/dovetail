@@ -208,3 +208,11 @@ export function formatIssue(issue) {
     url: issue.url,
   };
 }
+
+/**
+ * Delete a project
+ */
+export async function deleteProject(projectId) {
+  const linear = await getLinearClient();
+  await linear.deleteProject(projectId);
+}

@@ -206,3 +206,12 @@ export async function launch(options = {}) {
 
   await execa('flyctl', args, { stdio: 'inherit' });
 }
+
+/**
+ * Delete/destroy an app
+ */
+export async function deleteApp(appName) {
+  await ensureAuthenticated();
+
+  await execa('flyctl', ['apps', 'destroy', appName, '--yes']);
+}

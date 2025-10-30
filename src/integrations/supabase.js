@@ -207,3 +207,15 @@ export async function runSQL(projectRef, sql) {
 
   return response.data;
 }
+
+/**
+ * Delete a Supabase project
+ */
+export async function deleteProject(projectRef) {
+  const headers = await getHeaders();
+
+  await axios.delete(
+    `${SUPABASE_API_URL}/projects/${projectRef}`,
+    { headers }
+  );
+}

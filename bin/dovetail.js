@@ -21,6 +21,7 @@ import { cleanCommand } from '../src/commands/clean.js';
 import { configCommand } from '../src/commands/config.js';
 import { migrateCommand } from '../src/commands/migrate.js';
 import { rollbackCommand } from '../src/commands/rollback.js';
+import { purgeCommand } from '../src/commands/purge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -123,6 +124,11 @@ program
   .description('Clean up merged branches')
   .option('--dry-run', 'Show what would be deleted', false)
   .action(cleanCommand);
+
+program
+  .command('purge <slug>')
+  .description('Delete all project resources (GitHub, Linear, Supabase, Fly.io)')
+  .action(purgeCommand);
 
 program
   .command('migrate')

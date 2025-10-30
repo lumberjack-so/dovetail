@@ -307,6 +307,17 @@ export async function deleteBranch(owner, repo, branch) {
 }
 
 /**
+ * Delete a repository
+ */
+export async function deleteRepository(owner, repo) {
+  const client = await getOctokit();
+  await client.rest.repos.delete({
+    owner,
+    repo,
+  });
+}
+
+/**
  * Get repository public key for secrets
  */
 export async function getRepositoryPublicKey(owner, repo) {
