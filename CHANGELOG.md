@@ -2,6 +2,24 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.10] - 2025-10-30
+
+### Added
+- **CLAUDE.md**: Added comprehensive documentation for Claude Code users
+  - Detailed architecture and code structure guidance
+  - Development commands and conventions
+  - Integration patterns and configuration details
+  - Publishing workflow documentation
+
+### Improved
+- **README Architecture Section**: Enhanced with detailed architectural patterns
+  - Added complete command listing with descriptions
+  - Documented key architectural patterns (state management, configuration, service integration)
+  - Added quality gate documentation
+  - Improved clarity on how components interact
+
+**Impact**: Developers (especially those using Claude Code) now have comprehensive documentation to understand the codebase architecture and development workflow.
+
 ## [0.3.7] - 2025-10-30
 
 ### Fixed

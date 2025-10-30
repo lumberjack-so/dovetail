@@ -210,34 +210,65 @@ Can be used standalone, by Claude Code, in hooks, or in CI/CD.
 
 ## Architecture
 
+Dovetail follows a modular architecture with clear separation of concerns:
+
 ```
 dovetail/
 ├── bin/
-│   └── dovetail.js           # CLI entry point
+│   └── dovetail.js              # CLI entry point (Commander.js)
 ├── src/
-│   ├── commands/
-│   │   ├── init.js           # Project scaffolding
-│   │   ├── start.js          # Issue management
-│   │   ├── commit.js         # Smart commits
-│   │   ├── merge.js          # Merge automation
-│   │   └── deploy.js         # Deployment
-│   ├── integrations/
-│   │   ├── github.js         # GitHub API
-│   │   ├── linear.js         # Linear API
-│   │   ├── supabase.js       # Supabase API
-│   │   └── flyio.js          # Fly.io CLI wrapper
-│   ├── checks/
-│   │   ├── security-scan.js  # npm audit, sensitive files
-│   │   ├── test-runner.js    # Playwright, API tests
-│   │   └── quality-gate.js   # Merge requirements
-│   ├── utils/
-│   │   ├── git.js            # Git operations
-│   │   ├── state.js          # Project state management
-│   │   └── config.js         # Configuration
+│   ├── commands/                # CLI command implementations
+│   │   ├── onboard.js           # Interactive first-time setup
+│   │   ├── init.js              # Project scaffolding + infrastructure
+│   │   ├── start.js             # Linear issue management
+│   │   ├── commit.js            # Smart commits with auto-checks
+│   │   ├── ready.js             # Quality gate checks
+│   │   ├── merge.js             # Automated PR merge
+│   │   ├── deploy.js            # Fly.io deployment
+│   │   ├── status.js            # Project state display
+│   │   ├── test.js              # Test runner
+│   │   ├── config.js            # Token management
+│   │   └── ...                  # sync, clean, migrate, rollback
+│   ├── integrations/            # Service API wrappers
+│   │   ├── github.js            # GitHub API (Octokit)
+│   │   ├── linear.js            # Linear API (@linear/sdk)
+│   │   ├── supabase.js          # Supabase API (axios)
+│   │   └── flyio.js             # Fly.io CLI wrapper (execa)
+│   ├── checks/                  # Quality assurance
+│   │   ├── security-scan.js     # npm audit + sensitive files
+│   │   ├── test-runner.js       # Playwright + API tests
+│   │   └── quality-gate.js      # Merge requirements
+│   ├── utils/                   # Core utilities
+│   │   ├── git.js               # Git operations (simple-git)
+│   │   ├── state.js             # Global + project state
+│   │   ├── config.js            # Configuration management
+│   │   ├── logger.js            # Consistent logging
+│   │   └── slugify-helper.js    # Repository name normalization
 │   └── templates/
-│       └── scaffold.js       # Project templates
+│       └── scaffold.js          # PERN stack monorepo generator
 └── package.json
 ```
+
+### Key Architectural Patterns
+
+**State Management**: Two-level state system
+- Global state: `~/.dovetail/state.json` (user session, active issues)
+- Project state: `<project>/.dovetail/state.json` (infrastructure IDs)
+
+**Configuration**: Hierarchical config resolution
+- Config file (`~/.dovetail/config.json`) → Environment variables
+- Stores API tokens for GitHub, Linear, Supabase, Fly.io
+
+**Service Integration**: All integrations follow consistent patterns
+- Token retrieval via `getConfig()` with env fallback
+- Detailed error messages with actionable fixes
+- Async operation handling (e.g., Supabase polling)
+
+**Quality Gates**: Enforced checks before merge
+- Security: npm audit, sensitive files, console.log detection
+- CI status validation via GitHub API
+- Documentation update verification
+- Migration review requirements
 
 ## Configuration
 
