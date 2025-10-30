@@ -171,10 +171,10 @@ function generatePassword(length = 24) {
 export function formatProjectInfo(project) {
   return {
     id: project.id,
-    ref: project.ref,
+    ref: project.id,
     name: project.name,
     status: project.status,
-    url: `https://${project.ref}.supabase.co`,
+    url: `https://${project.id}.supabase.co`,
     region: project.region,
   };
 }

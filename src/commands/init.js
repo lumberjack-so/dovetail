@@ -204,11 +204,11 @@ export async function initCommand(projectName, options) {
           region: 'us-east-1',
         });
         // Wait for project to be ready
-        const readyProject = await waitForProject(project.ref);
+        const readyProject = await waitForProject(project.id);
         ctx.supabaseProject = readyProject;
         projectData.supabase = {
-          ref: readyProject.ref,
-          url: `https://${readyProject.ref}.supabase.co`,
+          ref: readyProject.id,
+          url: `https://${readyProject.id}.supabase.co`,
         };
       },
     },
@@ -218,8 +218,8 @@ export async function initCommand(projectName, options) {
         const stagingApp = `${config.slug}-staging`;
         const productionApp = `${config.slug}-production`;
 
-        await createApp(stagingApp, { region: config.region });
-        await createApp(productionApp, { region: config.region });
+        await createApp(stagingApp);
+        await createApp(productionApp);
 
         ctx.flyApps = { staging: stagingApp, production: productionApp };
         projectData.fly = {

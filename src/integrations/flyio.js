@@ -35,9 +35,8 @@ export async function createApp(appName, options = {}) {
     args.push('--org', options.org);
   }
 
-  if (options.region) {
-    args.push('--region', options.region);
-  }
+  // Note: --region flag is not supported in 'apps create'
+  // Region is specified during deployment instead
 
   const { stdout } = await execa('flyctl', args);
   return stdout;
