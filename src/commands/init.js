@@ -276,7 +276,27 @@ export async function initCommand(projectName, options) {
     console.log(chalk.cyan('  dovetail start'), '      # Begin working on an issue');
     console.log();
   } catch (error) {
-    logger.error(`Project creation failed: ${error.message}`);
+    console.log();
+    logger.error('Project creation failed:');
+    console.log();
+
+    // Show the full error message with all details
+    if (error.message) {
+      console.log(error.message);
+    } else {
+      console.log(String(error));
+    }
+
+    // If there are nested errors, show them too
+    if (error.errors && Array.isArray(error.errors)) {
+      console.log();
+      console.log(chalk.yellow('Additional errors:'));
+      error.errors.forEach((err, i) => {
+        console.log(`  ${i + 1}. ${err.message || err}`);
+      });
+    }
+
+    console.log();
     process.exit(1);
   }
 }

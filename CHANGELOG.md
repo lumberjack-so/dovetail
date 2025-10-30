@@ -2,6 +2,16 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.7] - 2025-10-30
+
+### Fixed
+- **Improved Error Display**: Enhanced error message output in init command
+  - Now shows full error messages instead of truncated versions
+  - Displays nested errors if present
+  - Better formatting for error details from API failures
+
+**Impact**: Users will now see complete error messages from Supabase and other services, making debugging much easier.
+
 ## [0.3.6] - 2025-10-30
 
 ### Added
