@@ -19,10 +19,23 @@ export async function initCommand(projectName, options) {
   // Validate configuration first
   const configCheck = await validateConfig();
   if (!configCheck.valid) {
-    logger.error('Configuration incomplete. Please run: dovetail config');
-    console.log(chalk.red('\nMissing:\n'));
-    configCheck.errors.forEach(err => console.log(chalk.red(`  - ${err}`)));
-    process.exit(1);
+    console.log(chalk.yellow('⚠️  Configuration incomplete. Let\'s set that up first!\n'));
+    console.log(chalk.gray('Missing:\n'));
+    configCheck.errors.forEach(err => console.log(chalk.gray(`  - ${err}`)));
+    console.log();
+
+    // Run config setup inline
+    const { setupConfig } = await import('../utils/config.js');
+    await setupConfig(inquirer);
+
+    // Validate again
+    const recheckConfig = await validateConfig();
+    if (!recheckConfig.valid) {
+      logger.error('Configuration still incomplete. Cannot proceed.');
+      process.exit(1);
+    }
+
+    console.log(chalk.green('\n✅ Configuration complete! Continuing with project setup...\n'));
   }
 
   // Prompt for additional details
