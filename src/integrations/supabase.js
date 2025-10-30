@@ -18,25 +18,59 @@ async function getHeaders() {
 }
 
 /**
+ * Retry wrapper for API calls with exponential backoff
+ */
+async function retryApiCall(fn, maxRetries = 3, baseDelay = 2000) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Check if error is retryable (502, 503, 504, network errors)
+      const isRetryable =
+        !error.response ||
+        error.response.status === 502 ||
+        error.response.status === 503 ||
+        error.response.status === 504;
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error;
+      }
+
+      // Exponential backoff with jitter
+      const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Create a new Supabase project
  */
 export async function createProject(name, organizationId, options = {}) {
-  const headers = await getHeaders();
-
   try {
-    const response = await axios.post(
-      `${SUPABASE_API_URL}/projects`,
-      {
-        name,
-        organization_id: organizationId,
-        db_pass: options.dbPassword || generatePassword(),
-        region: options.region || 'us-east-1',
-        plan: options.plan || 'free',
-      },
-      { headers }
-    );
+    return await retryApiCall(async () => {
+      const headers = await getHeaders();
 
-    return response.data;
+      const response = await axios.post(
+        `${SUPABASE_API_URL}/projects`,
+        {
+          name,
+          organization_id: organizationId,
+          db_pass: options.dbPassword || generatePassword(),
+          region: options.region || 'us-east-1',
+          plan: options.plan || 'free',
+        },
+        { headers }
+      );
+
+      return response.data;
+    });
   } catch (error) {
     // Build detailed error message including all debug info
     // (console.error doesn't work in Listr2 tasks, so we put it in the error message)
@@ -71,6 +105,16 @@ export async function createProject(name, organizationId, options = {}) {
         errorMsg = data.message || data.error || data.msg || data.error_description || JSON.stringify(data);
       }
 
+      // Provide helpful message for 502/503/504 errors
+      if (status === 502 || status === 503 || status === 504) {
+        throw new Error(
+          `Supabase API is temporarily unavailable (${status}).\n\n` +
+          `This is usually a temporary issue on Supabase's end. The request was retried 3 times but still failed.\n` +
+          `Please wait a few minutes and try again.\n` +
+          `\nOriginal error: ${errorMsg}${debugInfo}`
+        );
+      }
+
       throw new Error(`Supabase API error (${status}): ${errorMsg}${debugInfo}`);
     } else if (error.request) {
       // Request was made but no response received
@@ -86,14 +130,16 @@ export async function createProject(name, organizationId, options = {}) {
  * Get project details
  */
 export async function getProject(projectRef) {
-  const headers = await getHeaders();
+  return await retryApiCall(async () => {
+    const headers = await getHeaders();
 
-  const response = await axios.get(
-    `${SUPABASE_API_URL}/projects/${projectRef}`,
-    { headers }
-  );
+    const response = await axios.get(
+      `${SUPABASE_API_URL}/projects/${projectRef}`,
+      { headers }
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 /**
@@ -114,14 +160,16 @@ export async function getOrganizations() {
  * Get project API keys
  */
 export async function getProjectApiKeys(projectRef) {
-  const headers = await getHeaders();
+  return await retryApiCall(async () => {
+    const headers = await getHeaders();
 
-  const response = await axios.get(
-    `${SUPABASE_API_URL}/projects/${projectRef}/api-keys`,
-    { headers }
-  );
+    const response = await axios.get(
+      `${SUPABASE_API_URL}/projects/${projectRef}/api-keys`,
+      { headers }
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 /**
