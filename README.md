@@ -39,7 +39,7 @@ Every action is deterministic—runs security scans, visual tests, updates ticke
 ### From npm (Coming Soon)
 
 ```bash
-npm install -g dovetail-cli
+npm install -g @lumberjack-so/dovetail
 ```
 
 ### From Source

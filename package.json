@@ -1,5 +1,5 @@
 {
-  "name": "dovetail-cli",
+  "name": "@lumberjack-so/dovetail",
   "version": "0.1.0",
   "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow",
   "main": "src/index.js",
@@ -10,7 +10,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node bin/dovetail.js",
-    "prepublishOnly": "echo 'Ready to publish'"
+    "prepublishOnly": "echo 'Ready to publish'",
+    "publish:npm": "npm publish --access public"
   },
   "keywords": [
     "cli",
@@ -32,7 +33,7 @@
     "devops",
     "ci-cd"
   ],
-  "author": "Dovetail CLI",
+  "author": "Lumberjack Software",
   "license": "MIT",
   "repository": {
     "type": "git",
