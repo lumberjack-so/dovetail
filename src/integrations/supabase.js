@@ -38,6 +38,23 @@ export async function createProject(name, organizationId, options = {}) {
 
     return response.data;
   } catch (error) {
+    // Debug: Log the entire error object
+    console.error('\n=== SUPABASE ERROR DEBUG ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Has response:', !!error.response);
+
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      console.error('Response headers:', error.response.headers);
+    }
+
+    if (error.request) {
+      console.error('Request was made but no response');
+    }
+    console.error('=== END DEBUG ===\n');
+
     // Extract detailed error information from axios error
     if (error.response) {
       // axios HTTP error with response
