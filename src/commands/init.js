@@ -3,9 +3,9 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Listr } from 'listr2';
 import { createSlug } from '../utils/slugify-helper.js';
-import { createRepository, createOrganizationRepository, getAuthenticatedUser, getUserOrganizations } from '../integrations/github.js';
+import { createRepository, createOrganizationRepository, getAuthenticatedUser, getUserOrganizations, createRepositorySecrets } from '../integrations/github.js';
 import { createProject as createLinearProject, getTeams, createStarterIssues } from '../integrations/linear.js';
-import { createProject as createSupabaseProject, getOrganizations, waitForProject } from '../integrations/supabase.js';
+import { createProject as createSupabaseProject, getOrganizations, waitForProject, getProjectApiKeys } from '../integrations/supabase.js';
 import { createApp } from '../integrations/flyio.js';
 import { init as gitInit, addRemote, commit, push } from '../utils/git.js';
 import { scaffoldProject } from '../templates/scaffold.js';
@@ -185,6 +185,7 @@ export async function initCommand(projectName, options) {
         projectData.linear = {
           teamId: team.id,
           projectId: project.id,
+          url: project.url,
         };
       },
     },
@@ -205,7 +206,12 @@ export async function initCommand(projectName, options) {
         });
         // Wait for project to be ready
         const readyProject = await waitForProject(project.id);
+
+        // Get API keys
+        const apiKeys = await getProjectApiKeys(readyProject.id);
+
         ctx.supabaseProject = readyProject;
+        ctx.supabaseApiKeys = apiKeys;
         projectData.supabase = {
           ref: readyProject.id,
           url: `https://${readyProject.id}.supabase.co`,
@@ -256,6 +262,33 @@ export async function initCommand(projectName, options) {
         await updateProjectState(process.cwd(), projectData);
       },
     },
+    {
+      title: 'Setting up GitHub repository secrets',
+      task: async (ctx) => {
+        // Find anon and service_role keys from Supabase API keys
+        const anonKey = ctx.supabaseApiKeys.find(k => k.name === 'anon')?.api_key;
+        const serviceRoleKey = ctx.supabaseApiKeys.find(k => k.name === 'service_role')?.api_key;
+
+        const secrets = {
+          SUPABASE_URL: projectData.supabase.url,
+          SUPABASE_ANON_KEY: anonKey,
+          SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+          FLY_STAGING_URL: projectData.fly.staging,
+          FLY_PROD_URL: projectData.fly.production,
+        };
+
+        // Remove any undefined values
+        const validSecrets = Object.fromEntries(
+          Object.entries(secrets).filter(([_, v]) => v != null)
+        );
+
+        await createRepositorySecrets(
+          projectData.github.owner,
+          projectData.github.repo,
+          validSecrets
+        );
+      },
+    },
   ]);
 
   try {
@@ -265,7 +298,7 @@ export async function initCommand(projectName, options) {
 
     console.log(chalk.bold('Resources created:\n'));
     console.log(chalk.blue('GitHub:    '), projectData.github.url);
-    console.log(chalk.blue('Linear:    '), `https://linear.app/team/project/${projectData.linear.projectId}`);
+    console.log(chalk.blue('Linear:    '), projectData.linear.url);
     console.log(chalk.blue('Supabase:  '), projectData.supabase.url);
     console.log(chalk.blue('Staging:   '), projectData.fly.staging);
     console.log(chalk.blue('Production:'), projectData.fly.production);

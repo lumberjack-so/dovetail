@@ -305,3 +305,74 @@ export async function deleteBranch(owner, repo, branch) {
     ref: `heads/${branch}`,
   });
 }
+
+/**
+ * Get repository public key for secrets
+ */
+export async function getRepositoryPublicKey(owner, repo) {
+  const client = await getOctokit();
+  const response = await client.rest.actions.getRepoPublicKey({
+    owner,
+    repo,
+  });
+  return response.data;
+}
+
+/**
+ * Create or update a repository secret
+ */
+export async function createRepositorySecret(owner, repo, secretName, secretValue) {
+  const client = await getOctokit();
+
+  // Get the repository's public key
+  const { key, key_id } = await getRepositoryPublicKey(owner, repo);
+
+  // Encrypt the secret using tweetnacl
+  // Note: This requires tweetnacl to be installed: npm install tweetnacl tweetnacl-util
+  let encryptedValue;
+  try {
+    const { default: nacl } = await import('tweetnacl');
+    const naclUtil = await import('tweetnacl-util');
+
+    // Convert the secret and key to Uint8Array
+    const messageBytes = naclUtil.decodeUTF8(secretValue);
+    const keyBytes = naclUtil.decodeBase64(key);
+
+    // Encrypt the secret using box seal (public key encryption)
+    const encryptedBytes = nacl.seal(messageBytes, keyBytes);
+
+    // Convert encrypted bytes to base64
+    encryptedValue = naclUtil.encodeBase64(encryptedBytes);
+  } catch (error) {
+    throw new Error(
+      'Failed to encrypt secret. Make sure tweetnacl is installed:\n' +
+      'npm install tweetnacl tweetnacl-util\n\n' +
+      `Original error: ${error.message}`
+    );
+  }
+
+  // Create or update the secret
+  await client.rest.actions.createOrUpdateRepoSecret({
+    owner,
+    repo,
+    secret_name: secretName,
+    encrypted_value: encryptedValue,
+    key_id,
+  });
+}
+
+/**
+ * Create multiple repository secrets
+ */
+export async function createRepositorySecrets(owner, repo, secrets) {
+  const results = [];
+  for (const [name, value] of Object.entries(secrets)) {
+    try {
+      await createRepositorySecret(owner, repo, name, value);
+      results.push({ name, success: true });
+    } catch (error) {
+      results.push({ name, success: false, error: error.message });
+    }
+  }
+  return results;
+}
