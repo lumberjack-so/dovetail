@@ -1,0 +1,72 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'  # Also publish from Claude branches
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need 2 commits to compare versions
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check if version changed
+        id: version-check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Get previous version from last commit
+          git checkout HEAD~1 package.json 2>/dev/null || true
+          PREVIOUS_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+          git checkout HEAD package.json
+
+          echo "Previous version: $PREVIOUS_VERSION"
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged, skipping publish"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        if: steps.version-check.outputs.should_publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Git tag
+        if: steps.version-check.outputs.should_publish == 'true'
+        run: |
+          VERSION=${{ steps.version-check.outputs.current_version }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: steps.version-check.outputs.should_publish == 'true'
+        run: |
+          echo "✅ Published @lumberjack-so/dovetail@${{ steps.version-check.outputs.current_version }} to npm"
+          echo "📦 Package: https://www.npmjs.com/package/@lumberjack-so/dovetail"

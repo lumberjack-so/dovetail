@@ -299,6 +299,38 @@ my-project/
 
 Contributions welcome! Please open an issue or PR.
 
+## Development & Publishing
+
+### Automated npm Publishing
+
+This repository uses GitHub Actions to automatically publish to npm when the version in `package.json` changes.
+
+**How to publish a new version:**
+
+1. Update `package.json` version and `CHANGELOG.md`
+2. Commit and push to `main` or any `claude/**` branch
+3. GitHub Actions automatically publishes to npm! 🎉
+
+**Setup required (one-time):**
+- Add `NPM_TOKEN` to GitHub Secrets
+- See [.github/SETUP.md](.github/SETUP.md) for detailed instructions
+
+**What happens automatically:**
+- ✅ Detects version changes in `package.json`
+- ✅ Publishes to npm with `--access public`
+- ✅ Creates a git tag (e.g., `v0.3.5`)
+- ✅ Skips publishing if version unchanged
+
+**Monitoring:**
+- Check the **Actions** tab on GitHub to see publish status
+- Workflow runs on every push, but only publishes if version changed
+
+**Manual publishing (if needed):**
+```bash
+npm login
+npm publish --access public
+```
+
 ## License
 
 MIT
