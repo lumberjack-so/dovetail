@@ -83,6 +83,8 @@ export function displayConfig(config) {
 export async function setupConfig(inquirer) {
   console.log(chalk.bold('\n🔧 Dovetail Configuration\n'));
   console.log('You can configure API tokens here or use environment variables.\n');
+  console.log(chalk.yellow('⚠️  GitHub token requires "repo" scope for creating repositories'));
+  console.log(chalk.gray('   Create tokens at: https://github.com/settings/tokens\n'));
 
   const answers = await inquirer.prompt([
     {
@@ -112,5 +114,30 @@ export async function setupConfig(inquirer) {
   ]);
 
   await writeConfig(answers);
+
+  // Test GitHub token if provided
+  if (answers.githubToken) {
+    const ora = (await import('ora')).default;
+    const spinner = ora('Validating GitHub token...').start();
+    try {
+      const { testGitHubToken } = await import('../integrations/github.js');
+      const testResult = await testGitHubToken();
+
+      if (!testResult.valid) {
+        spinner.fail('GitHub token validation failed');
+        console.log(chalk.red(`Error: ${testResult.error}\n`));
+      } else if (!testResult.hasRepoAccess) {
+        spinner.warn(`Connected as ${chalk.cyan(testResult.username)}, but missing "repo" scope`);
+        console.log(chalk.yellow('\n⚠️  Your token is missing the "repo" scope!'));
+        console.log(chalk.gray('You won\'t be able to create repositories with this token.\n'));
+      } else {
+        spinner.succeed(`GitHub token validated for ${chalk.cyan(testResult.username)}`);
+      }
+    } catch (error) {
+      spinner.fail('GitHub token validation failed');
+      console.log(chalk.red(`Error: ${error.message}\n`));
+    }
+  }
+
   console.log(chalk.green('\n✅ Configuration saved!\n'));
 }

@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { validateConfig, getConfig, setConfig } from '../utils/config.js';
 import { readConfig, writeConfig, updateState } from '../utils/state.js';
-import { getAuthenticatedUser } from '../integrations/github.js';
+import { getAuthenticatedUser, testGitHubToken, getUserOrganizations } from '../integrations/github.js';
 import { getCurrentUser as getLinearUser } from '../integrations/linear.js';
 import { getOrganizations as getSupabaseOrgs } from '../integrations/supabase.js';
 import { isFlyctlInstalled } from '../integrations/flyio.js';
@@ -109,7 +109,8 @@ async function configureTokens() {
   // GitHub Token
   console.log(chalk.bold('1. GitHub Personal Access Token'));
   console.log(chalk.gray('   Create at: https://github.com/settings/tokens'));
-  console.log(chalk.gray('   Scopes needed: repo, workflow\n'));
+  console.log(chalk.yellow('   ⚠️  Required scopes: ') + chalk.bold('repo') + chalk.gray(' (full control of private repositories)'));
+  console.log(chalk.gray('   Optional scopes: workflow (for GitHub Actions)\n'));
 
   const { githubToken } = await inquirer.prompt([
     {
@@ -121,13 +122,68 @@ async function configureTokens() {
     },
   ]);
 
-  // Test GitHub connection
-  const githubSpinner = ora('Testing GitHub connection...').start();
+  // Test GitHub connection and scopes
+  const githubSpinner = ora('Testing GitHub connection and permissions...').start();
   try {
     await setConfig('githubToken', githubToken);
-    const user = await getAuthenticatedUser();
-    githubSpinner.succeed(`Connected as ${chalk.cyan(user.login)}!`);
-    tokens.github = { valid: true, username: user.login };
+    const testResult = await testGitHubToken();
+
+    if (!testResult.valid) {
+      githubSpinner.fail('GitHub connection failed');
+      console.log(chalk.red(`Error: ${testResult.error}\n`));
+      tokens.github = { valid: false, error: testResult.error };
+    } else if (!testResult.hasRepoAccess) {
+      githubSpinner.warn(`Connected as ${chalk.cyan(testResult.username)}, but missing "repo" scope`);
+      console.log(chalk.yellow('\n⚠️  Your token is missing the "repo" scope!\n'));
+      console.log(chalk.gray('This means you won\'t be able to create repositories.\n'));
+      console.log(chalk.gray('To add the scope:'));
+      console.log(chalk.gray('1. Go to https://github.com/settings/tokens'));
+      console.log(chalk.gray('2. Click on your token'));
+      console.log(chalk.gray('3. Select the "repo" checkbox'));
+      console.log(chalk.gray('4. Save changes\n'));
+      tokens.github = { valid: true, username: testResult.username, hasRepoAccess: false };
+    } else {
+      githubSpinner.succeed(`Connected as ${chalk.cyan(testResult.username)} with full repo access!`);
+      tokens.github = { valid: true, username: testResult.username, hasRepoAccess: true };
+
+      // Ask user to select default organization
+      console.log();
+      const orgsSpinner = ora('Fetching your GitHub organizations...').start();
+      try {
+        const orgs = await getUserOrganizations();
+        orgsSpinner.succeed(`Found ${orgs.length} organization(s)`);
+
+        if (orgs.length > 0) {
+          console.log();
+          const choices = [
+            { name: `Personal account (${testResult.username})`, value: null },
+            ...orgs.map(org => ({ name: org.login, value: org.login })),
+          ];
+
+          const { defaultOrg } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'defaultOrg',
+              message: 'Where should repositories be created by default?',
+              choices,
+            },
+          ]);
+
+          if (defaultOrg) {
+            await setConfig('githubDefaultOrg', defaultOrg);
+            console.log(chalk.green(`\n✓ Default organization set to: ${chalk.cyan(defaultOrg)}\n`));
+          } else {
+            await setConfig('githubDefaultOrg', null);
+            console.log(chalk.green(`\n✓ Repositories will be created in your personal account\n`));
+          }
+        } else {
+          orgsSpinner.info('No organizations found. Repositories will be created in your personal account.');
+        }
+      } catch (error) {
+        orgsSpinner.fail('Could not fetch organizations');
+        console.log(chalk.yellow(`Warning: ${error.message}\n`));
+      }
+    }
   } catch (error) {
     githubSpinner.fail('GitHub connection failed');
     console.log(chalk.red(`Error: ${error.message}\n`));

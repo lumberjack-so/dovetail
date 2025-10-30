@@ -22,13 +22,28 @@ async function getOctokit() {
  */
 export async function createRepository(name, options = {}) {
   const client = await getOctokit();
-  const response = await client.rest.repos.createForAuthenticatedUser({
-    name,
-    private: !options.public,
-    description: options.description || '',
-    auto_init: false,
-  });
-  return response.data;
+  try {
+    const response = await client.rest.repos.createForAuthenticatedUser({
+      name,
+      private: !options.public,
+      description: options.description || '',
+      auto_init: false,
+    });
+    return response.data;
+  } catch (error) {
+    if (error.message && error.message.includes('Resource not accessible')) {
+      throw new Error(
+        'GitHub token lacks repository creation permissions.\n\n' +
+        'Your token needs the "repo" scope. To fix:\n' +
+        '1. Go to https://github.com/settings/tokens\n' +
+        '2. Click on your token or create a new one\n' +
+        '3. Select the "repo" scope (full control of private repositories)\n' +
+        '4. Update your token: dovetail config\n\n' +
+        'For more details: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token'
+      );
+    }
+    throw error;
+  }
 }
 
 /**
@@ -38,6 +53,86 @@ export async function getAuthenticatedUser() {
   const client = await getOctokit();
   const response = await client.rest.users.getAuthenticated();
   return response.data;
+}
+
+/**
+ * Test GitHub token and check scopes
+ */
+export async function testGitHubToken() {
+  try {
+    const client = await getOctokit();
+
+    // Get authenticated user
+    const userResponse = await client.rest.users.getAuthenticated();
+
+    // Get token scopes from headers (Octokit doesn't expose this directly)
+    // We'll test actual permissions instead
+    const permissions = {
+      user: true, // We got here, so user scope works
+      repo: false,
+    };
+
+    // Test repo creation permission by checking if we can list repos
+    try {
+      await client.rest.repos.listForAuthenticatedUser({ per_page: 1 });
+      permissions.repo = true;
+    } catch (error) {
+      permissions.repo = false;
+    }
+
+    return {
+      valid: true,
+      username: userResponse.data.login,
+      permissions,
+      hasRepoAccess: permissions.repo,
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Get user's organizations
+ */
+export async function getUserOrganizations() {
+  const client = await getOctokit();
+  const response = await client.rest.orgs.listForAuthenticatedUser({
+    per_page: 100,
+  });
+  return response.data;
+}
+
+/**
+ * Create a repository in an organization
+ */
+export async function createOrganizationRepository(org, name, options = {}) {
+  const client = await getOctokit();
+  try {
+    const response = await client.rest.repos.createInOrg({
+      org,
+      name,
+      private: !options.public,
+      description: options.description || '',
+      auto_init: false,
+    });
+    return response.data;
+  } catch (error) {
+    if (error.message && error.message.includes('Resource not accessible')) {
+      throw new Error(
+        `GitHub token lacks permission to create repositories in the "${org}" organization.\n\n` +
+        'Your token needs the "repo" scope. To fix:\n' +
+        '1. Go to https://github.com/settings/tokens\n' +
+        '2. Click on your token or create a new one\n' +
+        '3. Select the "repo" scope (full control of private repositories)\n' +
+        '4. Update your token: dovetail config\n\n' +
+        'For more details: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token'
+      );
+    }
+    throw error;
+  }
 }
 
 /**

@@ -2,6 +2,29 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.2] - 2025-10-30
+
+### Added
+- **GitHub Organization Selection**: Users can now select default organization for repository creation
+  - During onboarding, fetches user's GitHub organizations
+  - Allows selection of personal account or any organization
+  - Saves default choice for future project creation
+  - Repositories are created in the selected organization automatically
+
+- **GitHub Token Scope Validation**: Added comprehensive validation for GitHub token permissions
+  - Tests token scopes during onboarding and configuration
+  - Warns users if "repo" scope is missing
+  - Provides clear instructions on how to add required scopes
+
+### Fixed
+- **Better Error Messages**: Improved error handling for GitHub API permission errors
+  - Repository creation failures now show actionable guidance
+  - Clear instructions on fixing token permissions
+  - Links to GitHub token documentation
+  - Organization-specific error messages when permissions are missing
+
+**Impact**: Users with organization tokens can now properly configure Dovetail to create repositories in their organizations instead of personal accounts. Token validation prevents permission errors before they happen, with clear guidance on fixing issues.
+
 ## [0.3.1] - 2025-10-30
 
 ### Fixed

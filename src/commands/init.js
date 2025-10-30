@@ -3,14 +3,14 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Listr } from 'listr2';
 import { createSlug } from '../utils/slugify-helper.js';
-import { createRepository, getAuthenticatedUser } from '../integrations/github.js';
+import { createRepository, createOrganizationRepository, getAuthenticatedUser } from '../integrations/github.js';
 import { createProject as createLinearProject, getTeams, createStarterIssues } from '../integrations/linear.js';
 import { createProject as createSupabaseProject, getOrganizations, waitForProject } from '../integrations/supabase.js';
 import { createApp } from '../integrations/flyio.js';
 import { init as gitInit, addRemote, commit, push } from '../utils/git.js';
 import { scaffoldProject } from '../templates/scaffold.js';
 import { updateProjectState } from '../utils/state.js';
-import { validateConfig } from '../utils/config.js';
+import { validateConfig, getConfig } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
 
 export async function initCommand(projectName, options) {
@@ -117,13 +117,30 @@ export async function initCommand(projectName, options) {
       title: 'Creating GitHub repository',
       task: async (ctx) => {
         const user = await getAuthenticatedUser();
-        const repo = await createRepository(config.slug, {
-          description: config.projectName,
-          public: config.public,
-        });
+        const defaultOrg = await getConfig('githubDefaultOrg');
+
+        let repo;
+        let owner;
+
+        if (defaultOrg) {
+          // Create in organization
+          repo = await createOrganizationRepository(defaultOrg, config.slug, {
+            description: config.projectName,
+            public: config.public,
+          });
+          owner = defaultOrg;
+        } else {
+          // Create in personal account
+          repo = await createRepository(config.slug, {
+            description: config.projectName,
+            public: config.public,
+          });
+          owner = user.login;
+        }
+
         ctx.githubRepo = repo;
         projectData.github = {
-          owner: user.login,
+          owner,
           repo: config.slug,
           url: repo.html_url,
         };
