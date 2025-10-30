@@ -9,21 +9,45 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node bin/dovetail.js"
+    "dev": "node bin/dovetail.js",
+    "prepublishOnly": "echo 'Ready to publish'"
   },
   "keywords": [
     "cli",
     "pern",
+    "pern-stack",
     "scaffold",
+    "scaffolding",
     "workflow",
     "automation",
     "react",
     "express",
     "postgresql",
-    "node"
+    "node",
+    "fullstack",
+    "github",
+    "linear",
+    "supabase",
+    "flyio",
+    "devops",
+    "ci-cd"
   ],
-  "author": "",
+  "author": "Dovetail CLI",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lumberjack-so/dovetail.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lumberjack-so/dovetail/issues"
+  },
+  "homepage": "https://github.com/lumberjack-so/dovetail#readme",
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
