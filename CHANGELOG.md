@@ -2,6 +2,26 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.2.0] - 2025-10-30
+
+### Added
+- **Seamless onboarding**: `dovetail init` now auto-launches config setup if tokens are missing
+  - No more confusing error messages telling you to run another command
+  - Inline token configuration during first init
+- **Interactive config management**: `dovetail config` is now a full menu system
+  - View current configuration status
+  - Update all tokens at once
+  - Update individual tokens without re-entering everything
+  - Clear all configuration
+  - Exit without changes
+
+### Changed
+- **Better UX flow**: Install → `dovetail init` → (auto config if needed) → project creation
+- **Improved visual feedback**: Color-coded messages throughout (warnings in yellow, success in green)
+- Configuration always displayed before making changes
+
+**Impact**: Much smoother first-time experience. No more confusion about what to do after installation.
+
 ## [0.1.3] - 2025-10-30
 
 ### Fixed
