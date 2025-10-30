@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import { readConfig, displayConfig, setupConfig, validateConfig } from '../utils/config.js';
+import { displayConfig, setupConfig, validateConfig } from '../utils/config.js';
+import { readConfig } from '../utils/state.js';
 import { logger } from '../utils/logger.js';
 
 export async function configCommand(options = {}) {
