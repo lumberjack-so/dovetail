@@ -2,9 +2,9 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import { deploy as flyDeploy, checkHealth, formatAppUrl } from '../integrations/flyio.js';
-import { createRelease, createTag, pushTags, getCommitStatus } from '../integrations/github.js';
+import { createRelease, getCommitStatus } from '../integrations/github.js';
 import { readProjectState } from '../utils/state.js';
-import { getCurrentBranch, getCommitsSince, createTag as gitCreateTag, isRepoClean } from '../utils/git.js';
+import { getCurrentBranch, getCommitsSince, createTag, pushTags, isRepoClean } from '../utils/git.js';
 import { runSmokeTests } from '../checks/test-runner.js';
 import { logger } from '../utils/logger.js';
 
@@ -163,7 +163,7 @@ export async function deployCommand(environment, options = {}) {
       const releaseSpinner = ora('Creating release...').start();
 
       try {
-        await gitCreateTag(version, `Release ${version}`);
+        await createTag(version, `Release ${version}`);
         await pushTags();
 
         await createRelease(
