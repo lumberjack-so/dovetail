@@ -36,8 +36,19 @@ Every action is deterministic—runs security scans, visual tests, updates ticke
 
 ## Installation
 
+### From npm (Coming Soon)
+
 ```bash
 npm install -g dovetail-cli
+```
+
+### From Source
+
+```bash
+git clone https://github.com/lumberjack-so/dovetail.git
+cd dovetail
+npm install
+npm link
 ```
 
 ## Quick Start
