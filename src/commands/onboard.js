@@ -32,7 +32,7 @@ async function runSkillAssessment() {
     {
       type: 'checkbox',
       name: 'technologies',
-      message: 'Which technologies are you comfortable with?',
+      message: 'Which technologies are you comfortable with? (Use space to select, enter to confirm)',
       choices: [
         { name: 'React', value: 'react' },
         { name: 'Node.js/Express', value: 'nodejs' },

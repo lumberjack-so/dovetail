@@ -2,6 +2,15 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.1] - 2025-10-30
+
+### Fixed
+- **Onboarding UX improvement**: Added clear instructions to checkbox question in skill assessment
+  - Technologies selection now shows "(Use space to select, enter to confirm)"
+  - Prevents confusion about how to select multiple technologies
+
+**Impact**: Users can now clearly understand how to interact with the multi-select technology question.
+
 ## [0.3.0] - 2025-10-30
 
 ### Added
