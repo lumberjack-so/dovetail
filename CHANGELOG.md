@@ -2,6 +2,44 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.0] - 2025-10-30
+
+### Added
+- **🎉 Interactive Onboarding Wizard (`dovetail onboard`)**
+  - **Skill Assessment Quiz**: 5 questions to understand user's experience level
+    - Overall development experience (beginner to expert)
+    - Technology familiarity (React, Node.js, PostgreSQL, TypeScript, etc.)
+    - Project management tool experience
+    - Deployment/hosting experience
+    - Preferred learning style
+    - Generates skill score (0-12) saved for future reference
+  - **API Token Configuration with Live Testing**
+    - GitHub: Tests connection, displays username
+    - Linear: Tests connection, displays user name
+    - Supabase: Tests connection, shows organization count
+    - Fly.io: Checks flyctl installation, configures token
+    - Real-time connection validation with spinners
+  - **Project Path Selection**
+    - Create new project from scratch
+    - Work with existing GitHub repository
+    - Work with current folder (if already in git repo)
+  - **Beautiful TUI Design**
+    - Box-drawing characters for header
+    - Color-coded sections (cyan for headers, green for success, yellow for warnings)
+    - Progress indicators with ora spinners
+    - Clear visual hierarchy and spacing
+  - **Persistent State Management**
+    - User profile saved to `~/.dovetail/state.json`
+    - Skill score and preferences accessible by Claude
+    - Onboarding completion tracking
+
+### Changed
+- **Updated recommended first-time flow**: Install → `dovetail onboard` → `dovetail init`
+- README updated with onboarding-first approach
+- Help menu now shows onboard command first
+
+**Impact**: New users now have a guided, personalized setup experience that takes 3-5 minutes and tests all connections.
+
 ## [0.2.0] - 2025-10-30
 
 ### Added
