@@ -70,16 +70,22 @@ export function displayConfig(config) {
     return token.substring(0, 4) + '*'.repeat(20);
   };
 
-  console.log(chalk.blue('GitHub Token:     '), maskToken(config.githubToken));
-  console.log(chalk.blue('Linear API Key:   '), maskToken(config.linearApiKey));
-  console.log(chalk.blue('Supabase Token:   '), maskToken(config.supabaseToken));
-  console.log(chalk.blue('Fly.io Token:     '), maskToken(config.flyToken));
+  console.log(chalk.blue('GitHub Token:       '), maskToken(config.githubToken));
+  console.log(chalk.blue('Linear API Key:     '), maskToken(config.linearApiKey));
+  console.log(chalk.blue('Supabase Token:     '), maskToken(config.supabaseToken));
+  console.log(chalk.blue('Fly.io Token:       '), maskToken(config.flyToken));
 
-  // Show default organization
-  const defaultOrg = config.githubDefaultOrg
+  // Show default GitHub organization
+  const defaultGithubOrg = config.githubDefaultOrg
     ? chalk.cyan(config.githubDefaultOrg)
     : chalk.gray('Personal account');
-  console.log(chalk.blue('Default GitHub Org:'), defaultOrg);
+  console.log(chalk.blue('GitHub Org:         '), defaultGithubOrg);
+
+  // Show default Supabase organization
+  const defaultSupabaseOrg = config.supabaseDefaultOrg
+    ? chalk.cyan(config.supabaseDefaultOrg)
+    : chalk.gray('Not set');
+  console.log(chalk.blue('Supabase Org:       '), defaultSupabaseOrg);
   console.log();
 }
 

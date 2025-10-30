@@ -242,6 +242,27 @@ async function configureTokens() {
     const orgs = await getSupabaseOrgs();
     supabaseSpinner.succeed(`Connected! Found ${chalk.cyan(orgs.length)} organization(s)`);
     tokens.supabase = { valid: true, orgCount: orgs.length };
+
+    // Ask user to select default organization
+    if (orgs.length > 0) {
+      console.log();
+      const choices = orgs.map(org => ({ name: org.name, value: org.id }));
+
+      const { defaultSupabaseOrg } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'defaultSupabaseOrg',
+          message: 'Which Supabase organization should be used for new projects?',
+          choices,
+        },
+      ]);
+
+      await setConfig('supabaseDefaultOrg', defaultSupabaseOrg);
+      const selectedOrg = orgs.find(org => org.id === defaultSupabaseOrg);
+      console.log(chalk.green(`\n✓ Default Supabase organization set to: ${chalk.cyan(selectedOrg.name)}\n`));
+    } else {
+      supabaseSpinner.warn('No Supabase organizations found. Please create one first.');
+    }
   } catch (error) {
     supabaseSpinner.fail('Supabase connection failed');
     console.log(chalk.red(`Error: ${error.message}\n`));

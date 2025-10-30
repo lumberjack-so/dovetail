@@ -2,6 +2,24 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.6] - 2025-10-30
+
+### Added
+- **Supabase Organization Selection**: Users can now select default Supabase organization
+  - During onboarding, fetches and displays all Supabase organizations
+  - Allows selection of which organization to use for new projects
+  - Saves default choice for automatic use in project creation
+  - Added "Change default Supabase organization" option to config menu
+  - Shows default Supabase org in config display
+
+### Fixed
+- **Supabase Project Creation**: No longer uses first organization blindly
+  - Uses saved default organization ID from configuration
+  - Shows clear error if no default organization is configured
+  - Prevents the "Request failed with status code 400" error caused by wrong organization
+
+**Impact**: This fixes the Supabase project creation failure! Users can now properly select their Supabase organization during onboarding, and projects will be created in the correct organization. This was the root cause of the 400 error during `dovetail init`.
+
 ## [0.3.5] - 2025-10-30
 
 ### Fixed

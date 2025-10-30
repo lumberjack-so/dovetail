@@ -5,6 +5,7 @@ import { displayConfig, setupConfig, validateConfig } from '../utils/config.js';
 import { readConfig, writeConfig } from '../utils/state.js';
 import { logger } from '../utils/logger.js';
 import { getUserOrganizations, getAuthenticatedUser } from '../integrations/github.js';
+import { getOrganizations as getSupabaseOrgs } from '../integrations/supabase.js';
 
 export async function configCommand(options = {}) {
   console.log(chalk.bold('\n🔧 Dovetail Configuration\n'));
@@ -35,7 +36,8 @@ export async function configCommand(options = {}) {
         choices: [
           { name: 'Update all tokens', value: 'update-all' },
           { name: 'Update individual token', value: 'update-one' },
-          { name: 'Change default GitHub organization', value: 'change-org' },
+          { name: 'Change default GitHub organization', value: 'change-github-org' },
+          { name: 'Change default Supabase organization', value: 'change-supabase-org' },
           { name: 'Clear all configuration', value: 'clear' },
           { name: 'Exit', value: 'exit' },
         ],
@@ -65,7 +67,7 @@ export async function configCommand(options = {}) {
       return;
     }
 
-    if (action === 'change-org') {
+    if (action === 'change-github-org') {
       console.log();
       const spinner = ora('Fetching your GitHub organizations...').start();
       try {
@@ -94,13 +96,54 @@ export async function configCommand(options = {}) {
         await writeConfig(updatedConfig);
 
         if (defaultOrg) {
-          logger.success(`Default organization set to: ${defaultOrg}`);
+          logger.success(`Default GitHub organization set to: ${defaultOrg}`);
         } else {
           logger.success('Repositories will be created in your personal account');
         }
         console.log();
       } catch (error) {
-        spinner.fail('Could not fetch organizations');
+        spinner.fail('Could not fetch GitHub organizations');
+        logger.error(error.message);
+        console.log();
+      }
+      return;
+    }
+
+    if (action === 'change-supabase-org') {
+      console.log();
+      const spinner = ora('Fetching your Supabase organizations...').start();
+      try {
+        const orgs = await getSupabaseOrgs();
+        spinner.succeed(`Found ${orgs.length} organization(s)`);
+
+        if (orgs.length === 0) {
+          spinner.warn('No Supabase organizations found. Please create one first.');
+          console.log();
+          return;
+        }
+
+        console.log();
+        const choices = orgs.map(org => ({ name: org.name, value: org.id }));
+
+        const { defaultOrg } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'defaultOrg',
+            message: 'Which Supabase organization should be used for new projects?',
+            choices,
+            default: currentConfig.supabaseDefaultOrg,
+          },
+        ]);
+
+        const updatedConfig = await readConfig();
+        updatedConfig.supabaseDefaultOrg = defaultOrg;
+        await writeConfig(updatedConfig);
+
+        const selectedOrg = orgs.find(org => org.id === defaultOrg);
+        logger.success(`Default Supabase organization set to: ${selectedOrg.name}`);
+        console.log();
+      } catch (error) {
+        spinner.fail('Could not fetch Supabase organizations');
         logger.error(error.message);
         console.log();
       }

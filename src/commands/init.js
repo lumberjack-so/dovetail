@@ -191,12 +191,16 @@ export async function initCommand(projectName, options) {
     {
       title: 'Creating Supabase project',
       task: async (ctx) => {
-        const orgs = await getOrganizations();
-        if (orgs.length === 0) {
-          throw new Error('No Supabase organizations found.');
+        const defaultOrgId = await getConfig('supabaseDefaultOrg');
+
+        if (!defaultOrgId) {
+          throw new Error(
+            'No default Supabase organization configured.\n' +
+            'Run "dovetail config" and select "Change default Supabase organization"'
+          );
         }
-        const org = orgs[0]; // Use first org
-        const project = await createSupabaseProject(config.projectName, org.id, {
+
+        const project = await createSupabaseProject(config.projectName, defaultOrgId, {
           region: 'us-east-1',
         });
         // Wait for project to be ready
