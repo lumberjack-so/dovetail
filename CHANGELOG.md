@@ -2,6 +2,13 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.1.3] - 2025-10-30
+
+### Fixed
+- Fixed import error in config command: `readConfig` imported from wrong module (should be from `state.js`, not `config.js`)
+
+**Impact**: `dovetail config` and `dovetail --version` now work without SyntaxError
+
 ## [0.1.2] - 2025-10-30
 
 ### Fixed
