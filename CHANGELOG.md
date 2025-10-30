@@ -2,6 +2,17 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.5] - 2025-10-30
+
+### Fixed
+- **Enhanced Supabase Error Handling**: Significantly improved error message extraction
+  - Tries multiple error message formats (message, error, msg, error_description)
+  - Handles string responses and object responses
+  - Shows detailed error for network issues
+  - Includes full JSON response if no specific error field found
+
+**Impact**: Users will now see the actual error from Supabase API, making debugging much easier.
+
 ## [0.3.4] - 2025-10-30
 
 ### Fixed

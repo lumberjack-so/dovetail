@@ -38,12 +38,29 @@ export async function createProject(name, organizationId, options = {}) {
 
     return response.data;
   } catch (error) {
-    // Provide more detailed error message
+    // Extract detailed error information from axios error
     if (error.response) {
-      const errorMsg = error.response.data?.message || error.response.data?.error || JSON.stringify(error.response.data);
-      throw new Error(`Supabase API error (${error.response.status}): ${errorMsg}`);
+      // axios HTTP error with response
+      const status = error.response.status;
+      const data = error.response.data;
+
+      // Try to extract error message from various possible formats
+      let errorMsg = 'Unknown error';
+
+      if (typeof data === 'string') {
+        errorMsg = data;
+      } else if (data) {
+        errorMsg = data.message || data.error || data.msg || data.error_description || JSON.stringify(data);
+      }
+
+      throw new Error(`Supabase API error (${status}): ${errorMsg}`);
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('No response from Supabase API - check your internet connection');
+    } else {
+      // Something else went wrong
+      throw new Error(`Supabase request failed: ${error.message}`);
     }
-    throw error;
   }
 }
 
