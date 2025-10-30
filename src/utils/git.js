@@ -175,10 +175,28 @@ export async function init() {
 }
 
 /**
- * Add remote
+ * Check if remote exists
+ */
+export async function remoteExists(name) {
+  try {
+    const remotes = await git.getRemotes();
+    return remotes.some(remote => remote.name === name);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Add remote (or update if it already exists)
  */
 export async function addRemote(name, url) {
-  await git.addRemote(name, url);
+  const exists = await remoteExists(name);
+  if (exists) {
+    // Update the remote URL instead of adding
+    await git.remote(['set-url', name, url]);
+  } else {
+    await git.addRemote(name, url);
+  }
 }
 
 /**
