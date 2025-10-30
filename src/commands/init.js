@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Listr } from 'listr2';
 import { createSlug } from '../utils/slugify-helper.js';
-import { createRepository, createOrganizationRepository, getAuthenticatedUser } from '../integrations/github.js';
+import { createRepository, createOrganizationRepository, getAuthenticatedUser, getUserOrganizations } from '../integrations/github.js';
 import { createProject as createLinearProject, getTeams, createStarterIssues } from '../integrations/linear.js';
 import { createProject as createSupabaseProject, getOrganizations, waitForProject } from '../integrations/supabase.js';
 import { createApp } from '../integrations/flyio.js';
@@ -38,6 +38,24 @@ export async function initCommand(projectName, options) {
     console.log(chalk.green('\n✅ Configuration complete! Continuing with project setup...\n'));
   }
 
+  // Get user and organizations for GitHub
+  const user = await getAuthenticatedUser();
+  const defaultOrg = await getConfig('githubDefaultOrg');
+  let orgs = [];
+
+  try {
+    orgs = await getUserOrganizations();
+  } catch (error) {
+    // If we can't fetch orgs, just continue with personal account
+    console.log(chalk.yellow(`⚠️  Could not fetch organizations: ${error.message}\n`));
+  }
+
+  // Build organization choices
+  const orgChoices = [
+    { name: `Personal account (${user.login})`, value: null },
+    ...orgs.map(org => ({ name: org.login, value: org.login })),
+  ];
+
   // Prompt for additional details
   const answers = await inquirer.prompt([
     {
@@ -49,6 +67,14 @@ export async function initCommand(projectName, options) {
         if (/^[a-z0-9-]+$/.test(input)) return true;
         return 'Slug must be lowercase letters, numbers, and hyphens only';
       },
+    },
+    {
+      type: 'list',
+      name: 'organization',
+      message: 'GitHub organization:',
+      choices: orgChoices,
+      default: defaultOrg,
+      when: () => orgs.length > 0, // Only ask if user has organizations
     },
     {
       type: 'list',
@@ -72,15 +98,17 @@ export async function initCommand(projectName, options) {
   const config = {
     projectName,
     slug: answers.slug,
+    organization: answers.organization !== undefined ? answers.organization : defaultOrg,
     region: answers.region,
     public: answers.public,
   };
 
   console.log(chalk.bold('\nProject Configuration:'));
-  console.log(chalk.blue('Name:       '), config.projectName);
-  console.log(chalk.blue('Slug:       '), config.slug);
-  console.log(chalk.blue('Region:     '), config.region);
-  console.log(chalk.blue('Visibility: '), config.public ? 'public' : 'private');
+  console.log(chalk.blue('Name:        '), config.projectName);
+  console.log(chalk.blue('Slug:        '), config.slug);
+  console.log(chalk.blue('Organization:'), config.organization ? chalk.cyan(config.organization) : chalk.gray(`Personal (${user.login})`));
+  console.log(chalk.blue('Region:      '), config.region);
+  console.log(chalk.blue('Visibility:  '), config.public ? 'public' : 'private');
   console.log();
 
   const { confirm } = await inquirer.prompt([
@@ -116,19 +144,16 @@ export async function initCommand(projectName, options) {
     {
       title: 'Creating GitHub repository',
       task: async (ctx) => {
-        const user = await getAuthenticatedUser();
-        const defaultOrg = await getConfig('githubDefaultOrg');
-
         let repo;
         let owner;
 
-        if (defaultOrg) {
+        if (config.organization) {
           // Create in organization
-          repo = await createOrganizationRepository(defaultOrg, config.slug, {
+          repo = await createOrganizationRepository(config.organization, config.slug, {
             description: config.projectName,
             public: config.public,
           });
-          owner = defaultOrg;
+          owner = config.organization;
         } else {
           // Create in personal account
           repo = await createRepository(config.slug, {

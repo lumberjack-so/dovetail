@@ -74,6 +74,12 @@ export function displayConfig(config) {
   console.log(chalk.blue('Linear API Key:   '), maskToken(config.linearApiKey));
   console.log(chalk.blue('Supabase Token:   '), maskToken(config.supabaseToken));
   console.log(chalk.blue('Fly.io Token:     '), maskToken(config.flyToken));
+
+  // Show default organization
+  const defaultOrg = config.githubDefaultOrg
+    ? chalk.cyan(config.githubDefaultOrg)
+    : chalk.gray('Personal account');
+  console.log(chalk.blue('Default GitHub Org:'), defaultOrg);
   console.log();
 }
 

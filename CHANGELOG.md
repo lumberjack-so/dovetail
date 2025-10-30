@@ -2,6 +2,23 @@
 
 All notable changes to the Dovetail CLI will be documented in this file.
 
+## [0.3.3] - 2025-10-30
+
+### Added
+- **Change Default Organization in Config**: Added ability to change default GitHub organization via `dovetail config`
+  - New menu option: "Change default GitHub organization"
+  - Shows current default organization in configuration display
+  - Fetches and displays all available organizations
+  - Allows switching between personal account and organizations
+
+- **Organization Selection in Init**: Added organization selection during project creation
+  - Users can now choose organization when running `dovetail init`
+  - Displays all available organizations plus personal account
+  - Defaults to saved default organization (press Enter to use default)
+  - Shows selected organization in project configuration preview
+
+**Impact**: Users now have full control over where repositories are created. They can set a default organization and override it on a per-project basis during init. This is especially useful for users who work with multiple organizations.
+
 ## [0.3.2] - 2025-10-30
 
 ### Added

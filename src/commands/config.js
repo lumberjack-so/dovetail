@@ -1,8 +1,10 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import ora from 'ora';
 import { displayConfig, setupConfig, validateConfig } from '../utils/config.js';
 import { readConfig, writeConfig } from '../utils/state.js';
 import { logger } from '../utils/logger.js';
+import { getUserOrganizations, getAuthenticatedUser } from '../integrations/github.js';
 
 export async function configCommand(options = {}) {
   console.log(chalk.bold('\n🔧 Dovetail Configuration\n'));
@@ -33,6 +35,7 @@ export async function configCommand(options = {}) {
         choices: [
           { name: 'Update all tokens', value: 'update-all' },
           { name: 'Update individual token', value: 'update-one' },
+          { name: 'Change default GitHub organization', value: 'change-org' },
           { name: 'Clear all configuration', value: 'clear' },
           { name: 'Exit', value: 'exit' },
         ],
@@ -59,6 +62,48 @@ export async function configCommand(options = {}) {
         logger.success('All tokens cleared!');
       }
       console.log();
+      return;
+    }
+
+    if (action === 'change-org') {
+      console.log();
+      const spinner = ora('Fetching your GitHub organizations...').start();
+      try {
+        const user = await getAuthenticatedUser();
+        const orgs = await getUserOrganizations();
+        spinner.succeed(`Found ${orgs.length} organization(s)`);
+
+        console.log();
+        const choices = [
+          { name: `Personal account (${user.login})`, value: null },
+          ...orgs.map(org => ({ name: org.login, value: org.login })),
+        ];
+
+        const { defaultOrg } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'defaultOrg',
+            message: 'Where should repositories be created by default?',
+            choices,
+            default: currentConfig.githubDefaultOrg,
+          },
+        ]);
+
+        const updatedConfig = await readConfig();
+        updatedConfig.githubDefaultOrg = defaultOrg;
+        await writeConfig(updatedConfig);
+
+        if (defaultOrg) {
+          logger.success(`Default organization set to: ${defaultOrg}`);
+        } else {
+          logger.success('Repositories will be created in your personal account');
+        }
+        console.log();
+      } catch (error) {
+        spinner.fail('Could not fetch organizations');
+        logger.error(error.message);
+        console.log();
+      }
       return;
     }
 
