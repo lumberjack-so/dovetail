@@ -53,17 +53,16 @@ npm link
 
 ## Quick Start
 
-### 1. Configure API Tokens
+### 1. Run Onboarding (First Time)
 
 ```bash
-dovetail config
+dovetail onboard
 ```
 
-You'll need:
-- **GitHub Token**: [Create here](https://github.com/settings/tokens) (scopes: `repo`, `workflow`)
-- **Linear API Key**: [Create here](https://linear.app/settings/api)
-- **Supabase Token**: [Create here](https://supabase.com/dashboard/account/tokens)
-- **Fly.io Token**: Run `flyctl auth token`
+This interactive wizard will:
+- 📚 **Assess your skill level** - Quick quiz to tailor the experience
+- 🔑 **Configure API tokens** - GitHub, Linear, Supabase, Fly.io with connection testing
+- 🚀 **Choose your path** - New project, existing repo, or current folder
 
 ### 2. Create a New Project
 
@@ -87,14 +86,34 @@ npm run dev              # Start dev servers
 dovetail start           # Begin working on an issue
 ```
 
+### Manual Token Configuration
+
+If you skip onboarding or need to update tokens later:
+
+```bash
+dovetail config
+```
+
+You'll need:
+- **GitHub Token**: [Create here](https://github.com/settings/tokens) (scopes: `repo`, `workflow`)
+- **Linear API Key**: [Create here](https://linear.app/settings/api)
+- **Supabase Token**: [Create here](https://supabase.com/dashboard/account/tokens)
+- **Fly.io Token**: Run `flyctl auth token`
+
 ## Commands
+
+### Getting Started
+
+```bash
+dovetail onboard                # Interactive onboarding wizard (first time)
+dovetail config                 # Manage API tokens (anytime)
+```
 
 ### Project Lifecycle
 
 ```bash
 dovetail init "Project Name"    # Bootstrap new project
 dovetail status                 # Show current project state
-dovetail config                 # Manage API tokens
 ```
 
 ### Work Session

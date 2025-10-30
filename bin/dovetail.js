@@ -7,6 +7,7 @@ import { dirname, join } from 'path';
 import { readFileSync } from 'fs';
 
 // Import commands
+import { onboardCommand } from '../src/commands/onboard.js';
 import { initCommand } from '../src/commands/init.js';
 import { startCommand } from '../src/commands/start.js';
 import { statusCommand } from '../src/commands/status.js';
@@ -35,6 +36,12 @@ program
   .name('dovetail')
   .description('An opinionated CLI that scaffolds and automates the entire PERN stack development workflow')
   .version(packageJson.version);
+
+// Onboarding
+program
+  .command('onboard')
+  .description('Interactive onboarding wizard for first-time setup')
+  .action(onboardCommand);
 
 // Project lifecycle
 program
