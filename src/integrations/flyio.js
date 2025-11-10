@@ -15,12 +15,17 @@ export async function isFlyctlInstalled() {
 
 /**
  * Get flyctl environment with authentication token
+ * If no token is configured, returns unmodified env to let flyctl use its own session
  */
 async function getFlyEnv() {
   const token = await getConfig('flyToken', 'FLY_API_TOKEN');
+
+  // If no token configured, let flyctl use its own session (from flyctl auth login)
   if (!token) {
-    throw new Error('Fly.io token not configured. Run: dovetail onboard');
+    return process.env;
   }
+
+  // If token is configured, pass it to flyctl
   return {
     ...process.env,
     FLY_API_TOKEN: token,
