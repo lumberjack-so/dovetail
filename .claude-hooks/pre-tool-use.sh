@@ -35,25 +35,20 @@ CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.git.currentBranch // "unknown"')
 # ============================================
 
 if [ -z "$ACTIVE_ISSUE" ]; then
-  cat <<EOF
+  cat >&2 <<EOF
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⛔ BLOCKED: No Active Linear Issue
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 You cannot write code without a Linear issue.
 
 REQUIRED ACTION:
 1. Execute: dovetail start <issue-key>
-   OR
-2. Tell user: "I need to start a Linear issue first"
-3. Then try again
+2. Then try writing code again
 
 This is enforced by Dovetail workflow.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 EOF
-  exit 1
+  exit 2
 fi
 
 # ============================================
@@ -61,11 +56,9 @@ fi
 # ============================================
 
 if [ "$CURRENT_BRANCH" == "main" ] || [ "$CURRENT_BRANCH" == "master" ]; then
-  cat <<EOF
+  cat >&2 <<EOF
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⛔ BLOCKED: Cannot Write on Main Branch
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Active issue: $ACTIVE_ISSUE
 Current branch: $CURRENT_BRANCH
@@ -78,10 +71,9 @@ REQUIRED ACTION:
 2. Then try again
 
 This is enforced by Dovetail workflow.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 EOF
-  exit 1
+  exit 2
 fi
 
 # ============================================
