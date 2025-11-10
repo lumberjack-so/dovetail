@@ -5,7 +5,7 @@ import { readProjectState, writeProjectState } from '../utils/state.js';
 import { validateConfig } from '../utils/config.js';
 import { getRemoteUrl, getCurrentBranch } from '../utils/git.js';
 import { getAuthenticatedUser, getRepository } from '../integrations/github.js';
-import { getLinearClient } from '../integrations/linear.js';
+import { getTeams } from '../integrations/linear.js';
 import { getOrganizations as getSupabaseOrgs } from '../integrations/supabase.js';
 import { logger } from '../utils/logger.js';
 import { existsSync } from 'fs';
@@ -94,14 +94,13 @@ export async function adoptCommand() {
 
   let linearTeamId, linearProjectId, linearProjectUrl;
   try {
-    const linear = await getLinearClient();
-    const teams = await linear.teams();
+    const teams = await getTeams();
 
-    linearSpinner.succeed(`Found ${teams.nodes.length} team(s)`);
+    linearSpinner.succeed(`Found ${teams.length} team(s)`);
 
     // Get all projects from all teams
     const teamChoices = [];
-    for (const team of teams.nodes) {
+    for (const team of teams) {
       const projects = await team.projects();
       for (const project of projects.nodes) {
         teamChoices.push({
