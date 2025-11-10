@@ -1,6 +1,6 @@
 {
   "name": "@lumberjack-so/dovetail",
-  "version": "0.3.16",
+  "version": "1.0.0",
   "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow",
   "main": "src/index.js",
   "bin": {
@@ -46,8 +46,11 @@
   "files": [
     "bin",
     "src",
+    ".claude-hooks",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CLAUDE.md",
+    "CLAUDE-CODE-INTEGRATION.md"
   ],
   "dependencies": {
     "chalk": "^5.3.0",
