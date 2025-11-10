@@ -50,7 +50,6 @@ export async function getOpenIssues(teamId, limit = 10) {
       state: { name: { nin: ['Done', 'Canceled'] } },
     },
     first: limit,
-    orderBy: 'priority',
   });
   return issues.nodes;
 }
