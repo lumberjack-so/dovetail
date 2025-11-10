@@ -14,20 +14,24 @@ export async function isFlyctlInstalled() {
 }
 
 /**
- * Ensure flyctl is authenticated
+ * Get flyctl environment with authentication token
  */
-async function ensureAuthenticated() {
+async function getFlyEnv() {
   const token = await getConfig('flyToken', 'FLY_API_TOKEN');
-  if (token) {
-    process.env.FLY_API_TOKEN = token;
+  if (!token) {
+    throw new Error('Fly.io token not configured. Run: dovetail onboard');
   }
+  return {
+    ...process.env,
+    FLY_API_TOKEN: token,
+  };
 }
 
 /**
  * Create a new Fly.io app
  */
 export async function createApp(appName, options = {}) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['apps', 'create', appName];
 
@@ -38,7 +42,7 @@ export async function createApp(appName, options = {}) {
   // Note: --region flag is not supported in 'apps create'
   // Region is specified during deployment instead
 
-  const { stdout } = await execa('flyctl', args);
+  const { stdout } = await execa('flyctl', args, { env });
   return stdout;
 }
 
@@ -46,7 +50,7 @@ export async function createApp(appName, options = {}) {
  * Deploy application
  */
 export async function deploy(appName, options = {}) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['deploy'];
 
@@ -59,6 +63,7 @@ export async function deploy(appName, options = {}) {
   }
 
   const { stdout } = await execa('flyctl', args, {
+    env,
     stdio: 'inherit',
   });
 
@@ -69,9 +74,9 @@ export async function deploy(appName, options = {}) {
  * Get app status
  */
 export async function getAppStatus(appName) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
-  const { stdout } = await execa('flyctl', ['status', '--app', appName, '--json']);
+  const { stdout } = await execa('flyctl', ['status', '--app', appName, '--json'], { env });
   return JSON.parse(stdout);
 }
 
@@ -79,9 +84,9 @@ export async function getAppStatus(appName) {
  * Get app info
  */
 export async function getAppInfo(appName) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
-  const { stdout } = await execa('flyctl', ['info', '--app', appName, '--json']);
+  const { stdout } = await execa('flyctl', ['info', '--app', appName, '--json'], { env });
   return JSON.parse(stdout);
 }
 
@@ -89,18 +94,18 @@ export async function getAppInfo(appName) {
  * Set app secrets
  */
 export async function setSecrets(appName, secrets) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const secretArgs = Object.entries(secrets).map(([key, value]) => `${key}=${value}`);
 
-  await execa('flyctl', ['secrets', 'set', ...secretArgs, '--app', appName]);
+  await execa('flyctl', ['secrets', 'set', ...secretArgs, '--app', appName], { env });
 }
 
 /**
  * Scale app
  */
 export async function scale(appName, options = {}) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['scale'];
 
@@ -114,16 +119,16 @@ export async function scale(appName, options = {}) {
 
   args.push('--app', appName);
 
-  await execa('flyctl', args);
+  await execa('flyctl', args, { env });
 }
 
 /**
  * List releases
  */
 export async function listReleases(appName) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
-  const { stdout } = await execa('flyctl', ['releases', '--app', appName, '--json']);
+  const { stdout } = await execa('flyctl', ['releases', '--app', appName, '--json'], { env });
   return JSON.parse(stdout);
 }
 
@@ -131,7 +136,7 @@ export async function listReleases(appName) {
  * Rollback to previous release
  */
 export async function rollback(appName, version = null) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['releases', 'rollback'];
 
@@ -141,14 +146,14 @@ export async function rollback(appName, version = null) {
 
   args.push('--app', appName);
 
-  await execa('flyctl', args);
+  await execa('flyctl', args, { env });
 }
 
 /**
  * Get app logs
  */
 export async function getLogs(appName, options = {}) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['logs', '--app', appName];
 
@@ -156,7 +161,7 @@ export async function getLogs(appName, options = {}) {
     args.push('--lines', options.lines.toString());
   }
 
-  const { stdout } = await execa('flyctl', args);
+  const { stdout } = await execa('flyctl', args, { env });
   return stdout;
 }
 
@@ -192,7 +197,7 @@ export function formatAppUrl(appName) {
  * Launch new app (interactive)
  */
 export async function launch(options = {}) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
   const args = ['launch', '--now', '--no-deploy'];
 
@@ -204,14 +209,14 @@ export async function launch(options = {}) {
     args.push('--region', options.region);
   }
 
-  await execa('flyctl', args, { stdio: 'inherit' });
+  await execa('flyctl', args, { env, stdio: 'inherit' });
 }
 
 /**
  * Delete/destroy an app
  */
 export async function deleteApp(appName) {
-  await ensureAuthenticated();
+  const env = await getFlyEnv();
 
-  await execa('flyctl', ['apps', 'destroy', appName, '--yes']);
+  await execa('flyctl', ['apps', 'destroy', appName, '--yes'], { env });
 }
