@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "sessionStart": ".claude/hooks/session-start.sh",
+    "userPromptSubmit": ".claude/hooks/user-prompt-submit.sh",
+    "preToolUse": ".claude/hooks/pre-tool-use.sh",
+    "postToolUse": ".claude/hooks/post-tool-use.sh",
+    "agentComplete": ".claude/hooks/agent-complete.sh"
+  },
+  "dovetail": {
+    "enforcement": "strict",
+    "autoCommit": false,
+    "autoMerge": false,
+    "autoDeploy": {
+      "staging": true,
+      "production": false
+    },
+    "requireConfirmation": {
+      "merge": true,
+      "deployProduction": true
+    }
+  },
+  "description": "Dovetail workflow enforcement - hooks automatically inject context and enforce development workflow"
+}

@@ -22,6 +22,8 @@ import { configCommand } from '../src/commands/config.js';
 import { migrateCommand } from '../src/commands/migrate.js';
 import { rollbackCommand } from '../src/commands/rollback.js';
 import { purgeCommand } from '../src/commands/purge.js';
+import { linearSearchCommand } from '../src/commands/linear-search.js';
+import { prStatusCommand } from '../src/commands/pr-status.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,6 +58,7 @@ program
 program
   .command('status')
   .description('Show current project state')
+  .option('--json', 'Output as JSON')
   .action(statusCommand);
 
 program
@@ -137,6 +140,21 @@ program
   .option('-u, --up', 'Run pending migrations')
   .option('-d, --down', 'Rollback last migration')
   .action(migrateCommand);
+
+// Hook helper commands
+program
+  .command('linear-search')
+  .description('Search Linear issues (for hooks)')
+  .option('--query <query>', 'Search query')
+  .option('--limit <limit>', 'Number of results', '10')
+  .option('--json', 'Output as JSON')
+  .action(linearSearchCommand);
+
+program
+  .command('pr-status')
+  .description('Get PR status for current branch (for hooks)')
+  .option('--json', 'Output as JSON')
+  .action(prStatusCommand);
 
 // Error handling
 program.exitOverride();
