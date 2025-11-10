@@ -409,17 +409,61 @@ async function createClaudeCodeHooks(projectDir, config) {
     }
   }
 
-  // Create Claude Code configuration
+  // Create Claude Code hooks configuration
+  await fs.writeFile(
+    join(projectDir, '.claude/settings.json'),
+    JSON.stringify({
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/session-start.sh'
+              }
+            ]
+          }
+        ],
+        UserPromptSubmit: [
+          {
+            hooks: [
+              {
+                type: 'command',
+                command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/user-prompt-submit.sh'
+              }
+            ]
+          }
+        ],
+        PreToolUse: [
+          {
+            matcher: 'Write|Edit',
+            hooks: [
+              {
+                type: 'command',
+                command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/pre-tool-use.sh'
+              }
+            ]
+          }
+        ],
+        PostToolUse: [
+          {
+            matcher: 'Write|Edit',
+            hooks: [
+              {
+                type: 'command',
+                command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/post-tool-use.sh'
+              }
+            ]
+          }
+        ]
+      }
+    }, null, 2)
+  );
+
+  // Create Dovetail configuration
   await fs.writeFile(
     join(projectDir, '.claude/config.json'),
     JSON.stringify({
-      hooks: {
-        sessionStart: '.claude/hooks/session-start.sh',
-        userPromptSubmit: '.claude/hooks/user-prompt-submit.sh',
-        preToolUse: '.claude/hooks/pre-tool-use.sh',
-        postToolUse: '.claude/hooks/post-tool-use.sh',
-        agentComplete: '.claude/hooks/agent-complete.sh'
-      },
       dovetail: {
         enforcement: 'strict',
         autoCommit: false,
