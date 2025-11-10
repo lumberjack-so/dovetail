@@ -273,7 +273,9 @@ async function configureTokens() {
 
   // Fly.io Token
   console.log(chalk.bold('4. Fly.io API Token'));
-  console.log(chalk.gray('   Get by running: flyctl auth token\n'));
+  console.log(chalk.gray('   Create at: https://fly.io/user/personal_access_tokens'));
+  console.log(chalk.yellow('   ⚠️  Do NOT use "flyctl auth token" - that gives a temporary session token'));
+  console.log(chalk.gray('   Create a permanent "Personal Access Token" from the dashboard\n'));
 
   const hasFlyctl = await isFlyctlInstalled();
   if (!hasFlyctl) {
