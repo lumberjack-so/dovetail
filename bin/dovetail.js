@@ -9,6 +9,7 @@ import { readFileSync } from 'fs';
 // Import commands
 import { onboardCommand } from '../src/commands/onboard.js';
 import { initCommand } from '../src/commands/init.js';
+import { adoptCommand } from '../src/commands/adopt.js';
 import { startCommand } from '../src/commands/start.js';
 import { statusCommand } from '../src/commands/status.js';
 import { commitCommand } from '../src/commands/commit.js';
@@ -54,6 +55,11 @@ program
   .option('-r, --region <region>', 'Fly.io region (default: iad)', 'iad')
   .option('--public', 'Make repository public', false)
   .action(initCommand);
+
+program
+  .command('adopt')
+  .description('Adopt an existing project into Dovetail')
+  .action(adoptCommand);
 
 program
   .command('status')
