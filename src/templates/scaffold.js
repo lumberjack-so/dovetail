@@ -25,6 +25,7 @@ export async function scaffoldProject(projectDir, config) {
     'tests',
     'docs',
     '.dovetail',
+    '.claude/hooks',
   ];
 
   for (const dir of dirs) {
@@ -108,6 +109,7 @@ export async function scaffoldProject(projectDir, config) {
   await createConfigFiles(projectDir, config);
   await createTestFiles(projectDir, config);
   await createDocFiles(projectDir, config);
+  await createClaudeCodeHooks(projectDir, config);
 }
 
 async function createWebFiles(projectDir, config) {
@@ -376,6 +378,122 @@ Health check endpoint.
 {
   "status": "ok"
 }
+\`\`\`
+`
+  );
+}
+
+async function createClaudeCodeHooks(projectDir, config) {
+  // Path to hook templates in dovetail installation
+  const hooksTemplateDir = join(__dirname, '../../.claude-hooks');
+
+  // Copy all hook scripts
+  const hookFiles = [
+    'session-start.sh',
+    'user-prompt-submit.sh',
+    'pre-tool-use.sh',
+    'post-tool-use.sh',
+    'agent-complete.sh'
+  ];
+
+  for (const hookFile of hookFiles) {
+    try {
+      const sourcePath = join(hooksTemplateDir, hookFile);
+      const destPath = join(projectDir, '.claude/hooks', hookFile);
+
+      const content = await fs.readFile(sourcePath, 'utf-8');
+      await fs.writeFile(destPath, content, { mode: 0o755 });
+    } catch (error) {
+      // Hook files are optional - if they don't exist, skip them
+      console.log(`Skipping hook ${hookFile}: ${error.message}`);
+    }
+  }
+
+  // Create Claude Code configuration
+  await fs.writeFile(
+    join(projectDir, '.claude/config.json'),
+    JSON.stringify({
+      hooks: {
+        sessionStart: '.claude/hooks/session-start.sh',
+        userPromptSubmit: '.claude/hooks/user-prompt-submit.sh',
+        preToolUse: '.claude/hooks/pre-tool-use.sh',
+        postToolUse: '.claude/hooks/post-tool-use.sh',
+        agentComplete: '.claude/hooks/agent-complete.sh'
+      },
+      dovetail: {
+        enforcement: 'strict',
+        autoCommit: false,
+        autoMerge: false,
+        autoDeploy: {
+          staging: true,
+          production: false
+        },
+        requireConfirmation: {
+          merge: true,
+          deployProduction: true
+        }
+      }
+    }, null, 2)
+  );
+
+  // Add README for Claude Code integration
+  await fs.writeFile(
+    join(projectDir, '.claude/README.md'),
+    `# Claude Code Integration
+
+This project is configured to work with Claude Code (claude.ai/code).
+
+## Dovetail Workflow Enforcement
+
+The hooks in this directory automatically enforce the Dovetail workflow:
+
+### What the Hooks Do
+
+1. **session-start.sh** - Shows project context when Claude Code opens
+2. **user-prompt-submit.sh** - Injects workflow requirements before every message
+3. **pre-tool-use.sh** - Blocks file operations if workflow requirements not met
+4. **post-tool-use.sh** - Suggests commits after significant work
+5. **agent-complete.sh** - Shows next workflow step after task completion
+
+### Workflow Enforcement
+
+The hooks enforce this workflow automatically:
+
+1. **Issue Selection** - Must have a Linear issue before coding
+2. **Branch Creation** - Must be on feature branch (not main)
+3. **Code Changes** - Can write code when requirements met
+4. **Commit** - Must commit before continuing (runs checks, creates PR)
+5. **Deploy** - Automatically deploys to staging after commit
+6. **Merge** - Requires testing confirmation, runs quality gate
+7. **Production** - Requires explicit confirmation
+
+### Commands Available
+
+- \`dovetail status\` - Show project state
+- \`dovetail start <issue-key>\` - Start work on issue
+- \`dovetail commit\` - Smart commit with checks
+- \`dovetail merge\` - Merge to main
+- \`dovetail deploy <env>\` - Deploy to staging/production
+
+Claude Code will automatically use these commands based on context.
+
+### Configuration
+
+Edit \`.claude/config.json\` to customize:
+- Auto-deployment settings
+- Confirmation requirements
+- Enforcement level
+
+### Disable Hooks
+
+To disable hooks temporarily:
+\`\`\`bash
+mv .claude/hooks .claude/hooks.disabled
+\`\`\`
+
+To re-enable:
+\`\`\`bash
+mv .claude/hooks.disabled .claude/hooks
 \`\`\`
 `
   );
