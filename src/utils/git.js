@@ -12,6 +12,15 @@ export async function getCurrentBranch() {
 }
 
 /**
+ * Get remote URL
+ */
+export async function getRemoteUrl(remoteName = 'origin') {
+  const remotes = await git.getRemotes(true);
+  const remote = remotes.find(r => r.name === remoteName);
+  return remote?.refs?.fetch || remote?.refs?.push || '';
+}
+
+/**
  * Check if repository is clean (no uncommitted changes)
  */
 export async function isRepoClean() {
