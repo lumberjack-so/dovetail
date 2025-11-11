@@ -70,18 +70,32 @@ export async function adoptCommand() {
     process.exit(1);
   }
 
-  // Verify GitHub repo exists
+  // Verify GitHub repo exists (optional - continue if fails)
   const verifySpinner = ora('Verifying GitHub repository access...').start();
   try {
     const repo = await getRepository(githubOwner, githubRepo);
     verifySpinner.succeed(`Connected to ${repo.full_name}`);
   } catch (error) {
-    verifySpinner.fail('Cannot access repository');
-    logger.error(error.message);
-    logger.info('\nMake sure:');
-    logger.info('1. Repository exists');
-    logger.info('2. Your GitHub token has access to it');
-    process.exit(1);
+    verifySpinner.warn('Cannot verify repository access');
+    console.log(chalk.yellow('\n⚠️  Could not verify GitHub repository access.'));
+    console.log(chalk.gray('This might be because:'));
+    console.log(chalk.gray('1. Repository is in an organization and token lacks org access'));
+    console.log(chalk.gray('2. Repository doesn\'t exist yet'));
+    console.log(chalk.gray('3. Token permissions are insufficient\n'));
+
+    const { continueAnyway } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueAnyway',
+        message: 'Continue anyway?',
+        default: true,
+      },
+    ]);
+
+    if (!continueAnyway) {
+      logger.info('Cancelled. Fix GitHub access and try again.');
+      process.exit(0);
+    }
   }
 
   console.log();
