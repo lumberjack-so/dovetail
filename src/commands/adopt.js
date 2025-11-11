@@ -19,13 +19,11 @@ export async function adoptCommand() {
   console.log(chalk.bold.cyan('\n🔗 Adopt Existing Project into Dovetail\n'));
 
   // Check if already a dovetail project
-  try {
-    await readProjectState(process.cwd());
+  const existingState = await readProjectState(process.cwd());
+  if (existingState && Object.keys(existingState).length > 0) {
     logger.error('This is already a Dovetail project!');
     logger.info('State file exists at: .dovetail/state.json');
     process.exit(1);
-  } catch {
-    // Good, not a dovetail project yet
   }
 
   // Validate config
