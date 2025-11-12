@@ -204,21 +204,43 @@ export async function configCommand(options = {}) {
       await writeFile(linearisConfigPath, JSON.stringify(linearisConfig, null, 2));
       logger.success('API key saved to ~/.linearisrc.json');
 
-      // Test authentication
-      const spinner = ora('Testing authentication...').start();
+      // Check if linearis CLI is installed before testing
+      const { execa } = await import('execa');
+      let linearisInstalled = false;
       try {
-        const testAuth = await checkLinearisAuth();
-        if (testAuth.authenticated) {
-          spinner.succeed('Authentication successful!');
-          console.log();
-          console.log(chalk.green('✓ You can now use Linear commands with dovetail'));
-        } else {
-          spinner.fail('Authentication failed');
-          logger.error('The API key might be invalid. Please check and try again.');
+        await execa('which', ['linearis']);
+        linearisInstalled = true;
+      } catch {
+        linearisInstalled = false;
+      }
+
+      if (!linearisInstalled) {
+        console.log();
+        logger.warning('Linearis CLI is not installed yet.');
+        console.log(chalk.dim('To complete setup, install linearis:'));
+        console.log(chalk.cyan('  npm install -g linearis'));
+        console.log();
+        console.log(chalk.dim('Or using homebrew:'));
+        console.log(chalk.cyan('  brew install linearis'));
+        console.log();
+        console.log('Once installed, your API key will be ready to use.');
+      } else {
+        // Test authentication
+        const spinner = ora('Testing authentication...').start();
+        try {
+          const testAuth = await checkLinearisAuth();
+          if (testAuth.authenticated) {
+            spinner.succeed('Authentication successful!');
+            console.log();
+            console.log(chalk.green('✓ You can now use Linear commands with dovetail'));
+          } else {
+            spinner.fail('Authentication failed');
+            logger.error('The API key might be invalid. Please check and try again.');
+          }
+        } catch (error) {
+          spinner.fail('Authentication test failed');
+          logger.error(error.message);
         }
-      } catch (error) {
-        spinner.fail('Authentication test failed');
-        logger.error(error.message);
       }
     } catch (error) {
       logger.error(`Failed to save API key: ${error.message}`);
