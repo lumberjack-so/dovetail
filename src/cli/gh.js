@@ -76,7 +76,7 @@ export async function getCurrentUser() {
  * Create a repository
  */
 export async function createRepo(name, options = {}) {
-  const args = ['repo', 'create', name, '--json', 'url,name,owner'];
+  const args = ['repo', 'create', name];
 
   if (options.private) {
     args.push('--private');
@@ -88,7 +88,23 @@ export async function createRepo(name, options = {}) {
     args.push('--description', options.description);
   }
 
-  const { stdout } = await execGh(args);
+  // Create the repository
+  await execGh(args);
+
+  // Get repository details using gh api
+  // Format: owner/name - need to get current user if not specified
+  const owner = options.owner || await getCurrentUser();
+  const repoFullName = `${owner}/${name}`;
+
+  // Fetch repo details
+  const { stdout } = await execGh([
+    'repo',
+    'view',
+    repoFullName,
+    '--json',
+    'name,owner,url'
+  ]);
+
   return JSON.parse(stdout);
 }
 
