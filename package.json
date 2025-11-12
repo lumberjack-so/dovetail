@@ -1,6 +1,6 @@
 {
   "name": "@lumberjack-so/dovetail",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow",
   "main": "src/index.js",
   "bin": {
