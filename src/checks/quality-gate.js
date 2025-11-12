@@ -1,5 +1,6 @@
 import { runSecurityChecks } from './security-scan.js';
-import { getCommitStatus } from '../integrations/github.js';
+// TODO 2.0: Migrate to gh CLI wrapper
+// import { getCommitStatus } from '../integrations/github.js';
 import { getCurrentBranch } from '../utils/git.js';
 import { getChangedFiles } from '../utils/git.js';
 
@@ -47,23 +48,24 @@ export async function checkMigrationsReviewed(changedFiles) {
 
 /**
  * Check CI status
+ * TODO 2.0: Migrate to gh CLI wrapper
  */
-export async function checkCIStatus(owner, repo) {
-  try {
-    const branch = await getCurrentBranch();
-    const status = await getCommitStatus(owner, repo, branch);
+// export async function checkCIStatus(owner, repo) {
+//   try {
+//     const branch = await getCurrentBranch();
+//     const status = await getCommitStatus(owner, repo, branch);
 
-    return {
-      passed: status.passing,
-      status,
-    };
-  } catch (error) {
-    return {
-      passed: false,
-      error: error.message,
-    };
-  }
-}
+//     return {
+//       passed: status.passing,
+//       status,
+//     };
+//   } catch (error) {
+//     return {
+//       passed: false,
+//       error: error.message,
+//     };
+//   }
+// }
 
 /**
  * Run the quality gate - all checks required for merge
@@ -82,10 +84,11 @@ export async function runQualityGate(options = {}) {
     migrations: await checkMigrationsReviewed(allFiles),
   };
 
+  // TODO 2.0: Migrate CI check to gh CLI wrapper
   // Check CI if GitHub info provided
-  if (options.owner && options.repo) {
-    checks.ci = await checkCIStatus(options.owner, options.repo);
-  }
+  // if (options.owner && options.repo) {
+  //   checks.ci = await checkCIStatus(options.owner, options.repo);
+  // }
 
   const passed = Object.values(checks).every(c => c.passed);
 

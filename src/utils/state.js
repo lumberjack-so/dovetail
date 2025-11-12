@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { promises as fs, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -154,4 +154,21 @@ export async function updateProjectState(projectRoot, updates) {
   const updated = { ...current, ...updates };
   await writeProjectState(projectRoot, updated);
   return updated;
+}
+
+// Aliases for backward compatibility
+export { writeProjectState as saveProjectState };
+
+/**
+ * Load project state from .dovetail/state.json (sync version)
+ */
+export function loadProjectState() {
+  const projectRoot = process.cwd();
+  const statePath = getProjectStatePath(projectRoot);
+  try {
+    const data = readFileSync(statePath, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    throw new Error('Not in a Dovetail project (no .dovetail/state.json found)');
+  }
 }

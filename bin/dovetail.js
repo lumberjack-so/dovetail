@@ -12,19 +12,19 @@ import { initCommand } from '../src/commands/init.js';
 import { adoptCommand } from '../src/commands/adopt.js';
 import { startCommand } from '../src/commands/start.js';
 import { statusCommand } from '../src/commands/status.js';
-import { commitCommand } from '../src/commands/commit.js';
+// import { commitCommand } from '../src/commands/commit.js'; // TODO 2.0: Migrate to CLI wrappers
 import { testCommand } from '../src/commands/test.js';
 import { readyCommand } from '../src/commands/ready.js';
-import { mergeCommand } from '../src/commands/merge.js';
-import { deployCommand } from '../src/commands/deploy.js';
+// import { mergeCommand } from '../src/commands/merge.js'; // TODO 2.0: Migrate to CLI wrappers
+// import { deployCommand } from '../src/commands/deploy.js'; // TODO 2.0: Migrate to CLI wrappers
 import { syncCommand } from '../src/commands/sync.js';
-import { cleanCommand } from '../src/commands/clean.js';
-import { configCommand } from '../src/commands/config.js';
+// import { cleanCommand } from '../src/commands/clean.js'; // TODO 2.0: Migrate to CLI wrappers
+// import { configCommand } from '../src/commands/config.js'; // TODO 2.0: Migrate to CLI wrappers
 import { migrateCommand } from '../src/commands/migrate.js';
-import { rollbackCommand } from '../src/commands/rollback.js';
-import { purgeCommand } from '../src/commands/purge.js';
-import { linearSearchCommand } from '../src/commands/linear-search.js';
-import { prStatusCommand } from '../src/commands/pr-status.js';
+// import { rollbackCommand } from '../src/commands/rollback.js'; // TODO 2.0: Migrate to CLI wrappers
+// import { purgeCommand } from '../src/commands/purge.js'; // TODO 2.0: Migrate to CLI wrappers
+// import { linearSearchCommand } from '../src/commands/linear-search.js'; // TODO 2.0: Migrate to CLI wrappers
+// import { prStatusCommand } from '../src/commands/pr-status.js'; // TODO 2.0: Migrate to CLI wrappers
 
 // Hook-equivalent commands (Dovetail 2.0)
 import { checkIssue } from '../src/commands/check-issue.js';
@@ -72,11 +72,12 @@ program
   .option('--json', 'Output as JSON')
   .action(statusCommand);
 
-program
-  .command('config')
-  .description('Manage API tokens and configuration')
-  .option('-s, --show', 'Show current configuration')
-  .action(configCommand);
+// TODO 2.0: Migrate config command to use CLI wrappers
+// program
+//   .command('config')
+//   .description('Manage API tokens and configuration')
+//   .option('-s, --show', 'Show current configuration')
+//   .action(configCommand);
 
 // Work session
 program
@@ -85,12 +86,13 @@ program
   .action(startCommand);
 
 // During work
-program
-  .command('commit')
-  .description('Smart commit with auto-checks')
-  .option('-m, --message <message>', 'Custom commit message')
-  .option('--auto', 'Auto-commit without prompts')
-  .action(commitCommand);
+// TODO 2.0: Migrate commit command to use CLI wrappers
+// program
+//   .command('commit')
+//   .description('Smart commit with auto-checks')
+//   .option('-m, --message <message>', 'Custom commit message')
+//   .option('--auto', 'Auto-commit without prompts')
+//   .action(commitCommand);
 
 program
   .command('test')
@@ -109,23 +111,26 @@ program
   .description('Check if ready to merge (runs quality gate)')
   .action(readyCommand);
 
-program
-  .command('merge')
-  .description('Merge to main branch')
-  .option('--skip-checks', 'Skip quality gate checks', false)
-  .action(mergeCommand);
+// TODO 2.0: Migrate merge command to use CLI wrappers
+// program
+//   .command('merge')
+//   .description('Merge to main branch')
+//   .option('--skip-checks', 'Skip quality gate checks', false)
+//   .action(mergeCommand);
 
 // Deployment
-program
-  .command('deploy <environment>')
-  .description('Deploy to staging or production')
-  .option('--skip-tests', 'Skip smoke tests', false)
-  .action(deployCommand);
+// TODO 2.0: Migrate deploy command to use CLI wrappers
+// program
+//   .command('deploy <environment>')
+//   .description('Deploy to staging or production')
+//   .option('--skip-tests', 'Skip smoke tests', false)
+//   .action(deployCommand);
 
-program
-  .command('rollback <environment> <version>')
-  .description('Rollback to a previous deployment')
-  .action(rollbackCommand);
+// TODO 2.0: Migrate rollback command to use CLI wrappers
+// program
+//   .command('rollback <environment> <version>')
+//   .description('Rollback to a previous deployment')
+//   .action(rollbackCommand);
 
 // Utilities
 program
@@ -133,16 +138,18 @@ program
   .description('Sync main branch from origin')
   .action(syncCommand);
 
-program
-  .command('clean')
-  .description('Clean up merged branches')
-  .option('--dry-run', 'Show what would be deleted', false)
-  .action(cleanCommand);
+// TODO 2.0: Migrate clean command to use CLI wrappers
+// program
+//   .command('clean')
+//   .description('Clean up merged branches')
+//   .option('--dry-run', 'Show what would be deleted', false)
+//   .action(cleanCommand);
 
-program
-  .command('purge <slug>')
-  .description('Delete all project resources (GitHub, Linear, Supabase, Fly.io)')
-  .action(purgeCommand);
+// TODO 2.0: Migrate purge command to use CLI wrappers
+// program
+//   .command('purge <slug>')
+//   .description('Delete all project resources (GitHub, Linear, Supabase, Fly.io)')
+//   .action(purgeCommand);
 
 program
   .command('migrate')
@@ -153,19 +160,21 @@ program
   .action(migrateCommand);
 
 // Hook helper commands
-program
-  .command('linear-search')
-  .description('Search Linear issues (for hooks)')
-  .option('--query <query>', 'Search query')
-  .option('--limit <limit>', 'Number of results', '10')
-  .option('--json', 'Output as JSON')
-  .action(linearSearchCommand);
+// TODO 2.0: Migrate linear-search command to use CLI wrappers
+// program
+//   .command('linear-search')
+//   .description('Search Linear issues (for hooks)')
+//   .option('--query <query>', 'Search query')
+//   .option('--limit <limit>', 'Number of results', '10')
+//   .option('--json', 'Output as JSON')
+//   .action(linearSearchCommand);
 
-program
-  .command('pr-status')
-  .description('Get PR status for current branch (for hooks)')
-  .option('--json', 'Output as JSON')
-  .action(prStatusCommand);
+// TODO 2.0: Migrate pr-status command to use CLI wrappers
+// program
+//   .command('pr-status')
+//   .description('Get PR status for current branch (for hooks)')
+//   .option('--json', 'Output as JSON')
+//   .action(prStatusCommand);
 
 // Hook-equivalent commands (Dovetail 2.0)
 program
