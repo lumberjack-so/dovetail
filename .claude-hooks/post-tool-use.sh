@@ -3,6 +3,12 @@
 # Dovetail Post-Tool-Use Hook
 # Automatically commits work when ready
 
+# Read JSON input from stdin
+INPUT=$(cat)
+
+# Extract tool_name from JSON
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
+
 # Only for file operations
 if [[ ! "$TOOL_NAME" =~ (Write|Edit) ]]; then
   exit 0

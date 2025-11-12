@@ -3,6 +3,12 @@
 # Dovetail Pre-Tool-Use Hook
 # AUTOMATICALLY enforces and executes Dovetail workflow
 
+# Read JSON input from stdin
+INPUT=$(cat)
+
+# Extract tool_name from JSON
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
+
 # Only enforce for file operations
 if [[ ! "$TOOL_NAME" =~ (Write|Edit|NotebookEdit) ]]; then
   exit 0
