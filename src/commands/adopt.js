@@ -166,17 +166,38 @@ export async function adoptCommand() {
 
   let supabaseRef, supabaseUrl;
   if (hasSupabase) {
-    const { ref } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'ref',
-        message: 'Supabase project ref (from project URL):',
-        validate: (input) => input.length > 0 || 'Required',
-      },
-    ]);
-    supabaseRef = ref;
-    supabaseUrl = `https://${ref}.supabase.co`;
-    console.log(chalk.green(`✓ Supabase: ${supabaseUrl}\n`));
+    try {
+      const spinner = ora('Fetching Supabase projects...').start();
+      const { getProjects } = await import('../integrations/supabase.js');
+      const projects = await getProjects();
+      spinner.stop();
+
+      if (!projects || projects.length === 0) {
+        console.log(chalk.yellow('⚠ No Supabase projects found\n'));
+        console.log(chalk.gray('Skipping Supabase\n'));
+      } else {
+        const choices = projects.map((project) => ({
+          name: `${project.name} (${project.id})`,
+          value: project.id,
+        }));
+
+        const { selectedProject } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'selectedProject',
+            message: 'Select Supabase project:',
+            choices,
+          },
+        ]);
+
+        supabaseRef = selectedProject;
+        supabaseUrl = `https://${selectedProject}.supabase.co`;
+        console.log(chalk.green(`✓ Supabase: ${supabaseUrl}\n`));
+      }
+    } catch (error) {
+      console.log(chalk.yellow(`⚠ Could not fetch Supabase projects: ${error.message}\n`));
+      console.log(chalk.gray('Skipping Supabase\n'));
+    }
   } else {
     console.log(chalk.gray('Skipping Supabase\n'));
   }

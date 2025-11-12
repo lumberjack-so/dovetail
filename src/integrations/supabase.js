@@ -157,6 +157,22 @@ export async function getOrganizations() {
 }
 
 /**
+ * Get all projects (across all organizations)
+ */
+export async function getProjects() {
+  return await retryApiCall(async () => {
+    const headers = await getHeaders();
+
+    const response = await axios.get(
+      `${SUPABASE_API_URL}/projects`,
+      { headers }
+    );
+
+    return response.data;
+  });
+}
+
+/**
  * Get project API keys
  */
 export async function getProjectApiKeys(projectRef) {
