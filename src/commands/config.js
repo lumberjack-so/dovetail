@@ -348,17 +348,17 @@ export async function configCommand(options = {}) {
       },
     ]);
 
-    // Save to ~/.linearisrc.json
+    // Save to ~/.linear_api_token (linearis expects this exact file)
     const { homedir } = await import('os');
     const { writeFile } = await import('fs/promises');
     const { join } = await import('path');
 
-    const linearisConfigPath = join(homedir(), '.linearisrc.json');
-    const linearisConfig = { apiKey };
+    const linearTokenPath = join(homedir(), '.linear_api_token');
 
     try {
-      await writeFile(linearisConfigPath, JSON.stringify(linearisConfig, null, 2));
-      logger.success('API key saved to ~/.linearisrc.json');
+      // Save just the token (not JSON) to ~/.linear_api_token
+      await writeFile(linearTokenPath, apiKey);
+      logger.success('API key saved to ~/.linear_api_token');
 
       // Test authentication
       const spinner = ora('Testing authentication...').start();
