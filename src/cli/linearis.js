@@ -3,17 +3,13 @@ import chalk from 'chalk';
 
 /**
  * Execute a Linearis CLI command
- * @param {string} command - The linearis subcommand (e.g., 'issue', 'project')
- * @param {string} action - The action (e.g., 'ls', 'create', 'show')
- * @param {Array<string>} args - Additional arguments
+ * @param {Array<string>} args - Command arguments
  * @param {Object} options - Options (stdin, etc.)
  * @returns {Promise<Object>} - { stdout, stderr, success }
  */
-export async function execLinearis(command, action, args = [], options = {}) {
-  const fullArgs = [command, action, ...args];
-
+export async function execLinearis(args = [], options = {}) {
   try {
-    const { stdout, stderr, exitCode } = await execa('linearis', fullArgs, {
+    const { stdout, stderr, exitCode } = await execa('linearis', args, {
       reject: false,
       ...options
     });
@@ -24,17 +20,19 @@ export async function execLinearis(command, action, args = [], options = {}) {
         throw new Error(
           'Linearis not authenticated.\n\n' +
           'Get your Linear API key at: https://linear.app/settings/api\n' +
-          'Then run: export LINEAR_API_KEY=<your-key>\n' +
-          'Or create ~/.linearisrc.json with: { "apiKey": "<your-key>" }'
+          'Then set LINEAR_API_KEY environment variable:\n' +
+          '  export LINEAR_API_KEY=<your-key>\n' +
+          'Or create ~/.linearisrc.json with:\n' +
+          '  { "apiKey": "<your-key>" }'
         );
       }
 
       if (stderr.includes('not found') && stderr.includes('team')) {
-        throw new Error(`Linear team not found. Check your team ID in .dovetail/state.json`);
+        throw new Error(`Linear team not found. Check your team ID or name.`);
       }
 
       if (stderr.includes('not found') && stderr.includes('project')) {
-        throw new Error(`Linear project not found. Check your project ID in .dovetail/state.json`);
+        throw new Error(`Linear project not found. Check your project ID or name.`);
       }
 
       throw new Error(`Linearis command failed:\n${stderr || stdout}`);
@@ -45,7 +43,8 @@ export async function execLinearis(command, action, args = [], options = {}) {
     if (error.code === 'ENOENT' || error.message.includes('command not found')) {
       throw new Error(
         'Linearis CLI not installed.\n\n' +
-        'Install it with: npm install -g linearis'
+        'Install it with: npm install -g linearis\n' +
+        'Repository: https://github.com/czottmann/linearis'
       );
     }
     throw error;
@@ -53,30 +52,47 @@ export async function execLinearis(command, action, args = [], options = {}) {
 }
 
 /**
- * List issues in a Linear project
+ * List issues in a Linear team/project
  */
 export async function listIssues(teamId, projectId, options = {}) {
-  const args = [
-    '--team', teamId,
-    '--json'
-  ];
+  const args = ['issues', 'list'];
 
+  // Use limit flag (linearis uses -l or --limit)
+  if (options.limit) {
+    args.push('-l', String(options.limit));
+  } else {
+    args.push('-l', '50'); // Default limit
+  }
+
+  // Add team filter if specified
+  if (teamId) {
+    args.push('--team', teamId);
+  }
+
+  // Add project filter if specified
   if (projectId) {
     args.push('--project', projectId);
   }
 
-  if (options.stateType) {
-    const stateTypes = Array.isArray(options.stateType) ? options.stateType : [options.stateType];
-    stateTypes.forEach(type => {
-      args.push('--state-type', type);
-    });
+  const { stdout } = await execLinearis(args);
+  return JSON.parse(stdout);
+}
+
+/**
+ * Search issues
+ */
+export async function searchIssues(query, options = {}) {
+  const args = ['issues', 'search', query];
+
+  if (options.team) {
+    args.push('--team', options.team);
   }
 
-  if (options.limit) {
-    args.push('--limit', String(options.limit));
+  if (options.project) {
+    args.push('--project', options.project);
   }
 
-  const { stdout } = await execLinearis('issue', 'ls', args);
+  const { stdout } = await execLinearis(args);
   return JSON.parse(stdout);
 }
 
@@ -84,7 +100,7 @@ export async function listIssues(teamId, projectId, options = {}) {
  * Show a single issue
  */
 export async function showIssue(issueKey) {
-  const { stdout } = await execLinearis('issue', 'show', [issueKey, '--json']);
+  const { stdout } = await execLinearis(['issues', 'read', issueKey]);
   return JSON.parse(stdout);
 }
 
@@ -93,9 +109,10 @@ export async function showIssue(issueKey) {
  */
 export async function createIssue(teamId, data) {
   const args = [
-    '--team', teamId,
-    '--title', data.title,
-    '--json'
+    'issues',
+    'create',
+    data.title,
+    '--team', teamId
   ];
 
   if (data.projectId) {
@@ -110,11 +127,18 @@ export async function createIssue(teamId, data) {
     args.push('--priority', String(data.priority));
   }
 
-  if (data.stateId) {
-    args.push('--state-id', data.stateId);
+  if (data.assignee) {
+    args.push('--assignee', data.assignee);
   }
 
-  const { stdout } = await execLinearis('issue', 'create', args);
+  if (data.labels) {
+    args.push('--labels', data.labels);
+  }
+
+  // Note: state must be set via update after creation if needed
+  // linearis issues create doesn't support --state
+
+  const { stdout } = await execLinearis(args);
   return JSON.parse(stdout);
 }
 
@@ -122,10 +146,16 @@ export async function createIssue(teamId, data) {
  * Update an issue
  */
 export async function updateIssue(issueKey, updates) {
-  const args = [issueKey, '--json'];
+  const args = ['issues', 'update', issueKey];
+
+  if (updates.state) {
+    args.push('--state', updates.state);
+  }
 
   if (updates.stateId) {
-    args.push('--state-id', updates.stateId);
+    // linearis uses --state not --state-id
+    // We'll need to pass the state name, not ID
+    throw new Error('updateIssue: use updates.state (state name) instead of updates.stateId');
   }
 
   if (updates.title) {
@@ -140,7 +170,19 @@ export async function updateIssue(issueKey, updates) {
     args.push('--priority', String(updates.priority));
   }
 
-  const { stdout } = await execLinearis('issue', 'update', args);
+  if (updates.labels) {
+    args.push('--labels', updates.labels);
+  }
+
+  if (updates.clearLabels) {
+    args.push('--clear-labels');
+  }
+
+  if (updates.parentTicket) {
+    args.push('--parent-ticket', updates.parentTicket);
+  }
+
+  const { stdout } = await execLinearis(args);
   return JSON.parse(stdout);
 }
 
@@ -148,23 +190,30 @@ export async function updateIssue(issueKey, updates) {
  * Add a comment to an issue
  */
 export async function commentOnIssue(issueKey, body) {
-  const { stdout } = await execLinearis('issue', 'comment', [
+  const { stdout } = await execLinearis([
+    'comments',
+    'create',
     issueKey,
-    '--body', body,
-    '--json'
+    '--body', body
   ]);
   return JSON.parse(stdout);
 }
 
 /**
  * List workflow states for a team
+ * Note: linearis doesn't have a dedicated workflow states command
+ * We'll need to use the Linear API directly or hard-code common states
  */
 export async function listWorkflowStates(teamId) {
-  const { stdout } = await execLinearis('workflow-state', 'ls', [
-    '--team', teamId,
-    '--json'
-  ]);
-  return JSON.parse(stdout);
+  // linearis doesn't support listing workflow states
+  // Return common Linear states as a fallback
+  return [
+    { id: 'backlog', name: 'Backlog', type: 'backlog' },
+    { id: 'unstarted', name: 'Todo', type: 'unstarted' },
+    { id: 'started', name: 'In Progress', type: 'started' },
+    { id: 'completed', name: 'Done', type: 'completed' },
+    { id: 'canceled', name: 'Canceled', type: 'canceled' },
+  ];
 }
 
 /**
@@ -172,28 +221,89 @@ export async function listWorkflowStates(teamId) {
  */
 export async function checkAuth() {
   try {
-    await execLinearis('team', 'ls', ['--json']);
+    // Try to list projects - if this works, we're authenticated
+    await execLinearis(['projects', 'list']);
     return { authenticated: true };
   } catch (error) {
-    return { authenticated: false, error: error.message };
+    if (error.message.includes('not authenticated') || error.message.includes('API key')) {
+      return { authenticated: false, error: error.message };
+    }
+    throw error;
   }
 }
 
 /**
  * List teams
+ * Note: linearis doesn't have a dedicated teams command
  */
 export async function listTeams() {
-  const { stdout } = await execLinearis('team', 'ls', ['--json']);
+  throw new Error('linearis does not support listing teams. Use the Linear API or web UI.');
+}
+
+/**
+ * List projects
+ */
+export async function listProjects(teamId) {
+  const args = ['projects', 'list'];
+
+  if (teamId) {
+    args.push('--team', teamId);
+  }
+
+  const { stdout } = await execLinearis(args);
   return JSON.parse(stdout);
 }
 
 /**
- * List projects for a team
+ * List labels
  */
-export async function listProjects(teamId) {
-  const { stdout } = await execLinearis('project', 'ls', [
-    '--team', teamId,
-    '--json'
-  ]);
+export async function listLabels(teamId) {
+  const args = ['labels', 'list'];
+
+  if (teamId) {
+    args.push('--team', teamId);
+  }
+
+  const { stdout } = await execLinearis(args);
+  return JSON.parse(stdout);
+}
+
+/**
+ * List cycles (sprints)
+ */
+export async function listCycles(teamId, options = {}) {
+  const args = ['cycles', 'list'];
+
+  if (teamId) {
+    args.push('--team', teamId);
+  }
+
+  if (options.limit) {
+    args.push('--limit', String(options.limit));
+  }
+
+  if (options.active) {
+    args.push('--active');
+  }
+
+  if (options.aroundActive) {
+    args.push('--around-active', String(options.aroundActive));
+  }
+
+  const { stdout } = await execLinearis(args);
+  return JSON.parse(stdout);
+}
+
+/**
+ * Read cycle details
+ */
+export async function readCycle(cycleName, teamId) {
+  const args = ['cycles', 'read', cycleName];
+
+  if (teamId) {
+    args.push('--team', teamId);
+  }
+
+  const { stdout } = await execLinearis(args);
   return JSON.parse(stdout);
 }

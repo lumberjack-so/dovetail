@@ -96,7 +96,7 @@ export async function start(options = {}) {
           console.error(chalk.dim('   Moving issue to "In Progress" in Linear...'));
         }
         await updateIssue(issue.identifier, {
-          stateId: inProgressState.id
+          state: inProgressState.name
         });
         if (!quiet) {
           console.error(chalk.green(`   ✓ Issue moved to "In Progress"`));
