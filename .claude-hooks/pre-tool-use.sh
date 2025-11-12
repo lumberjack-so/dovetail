@@ -110,4 +110,12 @@ fi
 # All checks passed
 # ============================================
 
+cat <<EOF
+
+✅ Dovetail: All workflow checks passed
+   Issue: $ACTIVE_ISSUE
+   Branch: $CURRENT_BRANCH
+
+EOF
+
 exit 0
