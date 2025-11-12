@@ -35,6 +35,24 @@ CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.git.currentBranch // "unknown"')
 # ============================================
 
 if [ -z "$ACTIVE_ISSUE" ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "⛔ DOVETAIL PRE-TOOL-USE: BLOCKED" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "" >&2
+  echo "VIOLATION: No Active Linear Issue" >&2
+  echo "" >&2
+  echo "Dovetail enforces issue-driven development." >&2
+  echo "You MUST select a Linear issue before writing code." >&2
+  echo "" >&2
+  echo "🔧 REQUIRED ACTION FOR CLAUDE:" >&2
+  echo "1. Run: dovetail linear-search --query \"<search-term>\"" >&2
+  echo "2. Then: dovetail start <issue-key>" >&2
+  echo "" >&2
+  echo "Example: dovetail start TSL-123" >&2
+  echo "" >&2
+  echo "⛔ File operation BLOCKED until issue selected" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+
   cat >&2 <<EOF
 
 ⛔ WORKFLOW VIOLATION: No Active Linear Issue
@@ -114,6 +132,12 @@ fi
 # ============================================
 # All checks passed
 # ============================================
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+echo "✅ DOVETAIL PRE-TOOL-USE: PASSED" >&2
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+echo "Issue: $ACTIVE_ISSUE | Branch: $CURRENT_BRANCH" >&2
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
 
 cat <<EOF
 

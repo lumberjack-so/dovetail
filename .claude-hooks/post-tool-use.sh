@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Dovetail Post-Tool-Use Hook
-# Tracks changes and suggests workflow checkpoints
+# Automatically commits work when ready
 
 # Only for file operations
 if [[ ! "$TOOL_NAME" =~ (Write|Edit) ]]; then
@@ -41,49 +41,34 @@ else
 fi
 echo "$OPERATION_COUNT" > "$COUNT_FILE"
 
-# Show status based on changes
-if [ "$HAS_CHANGES" == "true" ]; then
-  if [ "$CHANGED_COUNT" -ge 5 ] && [ "$OPERATION_COUNT" -ge 5 ]; then
-    cat <<EOF
+# Print status to console (visible to user)
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+echo "📝 DOVETAIL POST-TOOL-USE HOOK" >&2
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+echo "Issue: $ACTIVE_ISSUE | Branch: $CURRENT_BRANCH" >&2
+echo "Files changed: $CHANGED_COUNT | Operations: $OPERATION_COUNT" >&2
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 AUTO-COMMIT THRESHOLD REACHED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Auto-commit threshold: 3+ file operations
+if [ "$HAS_CHANGES" == "true" ] && [ "$OPERATION_COUNT" -ge 3 ]; then
+  echo "" >&2
+  echo "🚀 AUTO-COMMIT TRIGGERED (threshold: 3 operations)" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+  echo "" >&2
 
-📊 Status:
-• Active Issue: $ACTIVE_ISSUE
-• Branch: $CURRENT_BRANCH
-• Files Modified: $CHANGED_COUNT
-• Operations: $OPERATION_COUNT
+  # ACTUALLY RUN THE COMMIT COMMAND
+  echo "Executing: dovetail commit --auto" >&2
+  dovetail commit --auto
 
-Significant work detected. Ready to commit.
+  # Reset counter after commit
+  echo "0" > "$COUNT_FILE"
 
-🔧 WORKFLOW INSTRUCTION:
-Claude should now execute: dovetail commit --auto
-
-This will automatically:
-• Run security & quality checks
-• Execute automated tests
-• Create/update GitHub PR
-• Update Linear issue to "In Review"
-
-Then reset the counter for next batch of work.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EOF
-    # Reset counter after suggesting commit
-    echo "0" > "$COUNT_FILE"
-  else
-    cat <<EOF
-
-📝 Dovetail: $CHANGED_COUNT file(s) modified on $ACTIVE_ISSUE (operation $OPERATION_COUNT)
-
-EOF
-  fi
+  echo "" >&2
+  echo "✅ Auto-commit completed!" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
 else
-  cat <<EOF
-
-📝 Dovetail: File operation completed (no uncommitted changes)
-
-EOF
+  echo "⏳ Waiting for more changes before auto-commit (3 ops)" >&2
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
 fi
+
+# Exit 0 to allow the tool operation
+exit 0
