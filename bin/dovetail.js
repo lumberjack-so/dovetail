@@ -19,7 +19,7 @@ import { readyCommand } from '../src/commands/ready.js';
 // import { deployCommand } from '../src/commands/deploy.js'; // TODO 2.0: Migrate to CLI wrappers
 import { syncCommand } from '../src/commands/sync.js';
 // import { cleanCommand } from '../src/commands/clean.js'; // TODO 2.0: Migrate to CLI wrappers
-// import { configCommand } from '../src/commands/config.js'; // TODO 2.0: Migrate to CLI wrappers
+import { configCommand } from '../src/commands/config.js';
 import { migrateCommand } from '../src/commands/migrate.js';
 // import { rollbackCommand } from '../src/commands/rollback.js'; // TODO 2.0: Migrate to CLI wrappers
 // import { purgeCommand } from '../src/commands/purge.js'; // TODO 2.0: Migrate to CLI wrappers
@@ -72,12 +72,11 @@ program
   .option('--json', 'Output as JSON')
   .action(statusCommand);
 
-// TODO 2.0: Migrate config command to use CLI wrappers
-// program
-//   .command('config')
-//   .description('Manage API tokens and configuration')
-//   .option('-s, --show', 'Show current configuration')
-//   .action(configCommand);
+program
+  .command('config')
+  .description('Manage CLI authentication and preferences')
+  .option('-s, --show', 'Show current configuration')
+  .action(configCommand);
 
 // Work session
 program

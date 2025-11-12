@@ -1,215 +1,268 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import { displayConfig, setupConfig, validateConfig } from '../utils/config.js';
 import { readConfig, writeConfig } from '../utils/state.js';
 import { logger } from '../utils/logger.js';
-import { getUserOrganizations, getAuthenticatedUser } from '../integrations/github.js';
-import { getOrganizations as getSupabaseOrgs } from '../integrations/supabase.js';
+import { checkAuth as checkGhAuth, getCurrentUser as getGhUser } from '../cli/gh.js';
+import { checkAuth as checkLinearisAuth } from '../cli/linearis.js';
+import { checkAuth as checkSupabaseAuth } from '../cli/supabase.js';
+import { checkAuth as checkFlyAuth } from '../cli/flyctl.js';
+
+/**
+ * Check authentication status for all CLIs
+ */
+async function checkAllAuth() {
+  const status = {
+    gh: { authenticated: false, user: null },
+    linearis: { authenticated: false },
+    supabase: { authenticated: false },
+    flyctl: { authenticated: false },
+  };
+
+  try {
+    await checkGhAuth();
+    status.gh.authenticated = true;
+    try {
+      status.gh.user = await getGhUser();
+    } catch {
+      // User info not critical
+    }
+  } catch {
+    status.gh.authenticated = false;
+  }
+
+  try {
+    await checkLinearisAuth();
+    status.linearis.authenticated = true;
+  } catch {
+    status.linearis.authenticated = false;
+  }
+
+  try {
+    await checkSupabaseAuth();
+    status.supabase.authenticated = true;
+  } catch {
+    status.supabase.authenticated = false;
+  }
+
+  try {
+    await checkFlyAuth();
+    status.flyctl.authenticated = true;
+  } catch {
+    status.flyctl.authenticated = false;
+  }
+
+  return status;
+}
+
+/**
+ * Display authentication status
+ */
+function displayAuthStatus(status) {
+  console.log(chalk.bold('CLI Authentication Status:\n'));
+
+  const ghStatus = status.gh.authenticated
+    ? chalk.green(`✓ Authenticated${status.gh.user ? ` as ${status.gh.user}` : ''}`)
+    : chalk.red('✗ Not authenticated');
+  console.log(chalk.bold('GitHub (gh):'), ghStatus);
+  if (!status.gh.authenticated) {
+    console.log(chalk.dim('  Run: gh auth login'));
+  }
+
+  const linearStatus = status.linearis.authenticated
+    ? chalk.green('✓ Authenticated')
+    : chalk.red('✗ Not authenticated');
+  console.log(chalk.bold('Linear (linearis):'), linearStatus);
+  if (!status.linearis.authenticated) {
+    console.log(chalk.dim('  Set: LINEAR_API_KEY=<key> in ~/.zshrc or ~/.bashrc'));
+    console.log(chalk.dim('  Or create: ~/.linearisrc.json with {"apiKey": "<key>"}'));
+  }
+
+  const supabaseStatus = status.supabase.authenticated
+    ? chalk.green('✓ Authenticated')
+    : chalk.red('✗ Not authenticated');
+  console.log(chalk.bold('Supabase:'), supabaseStatus);
+  if (!status.supabase.authenticated) {
+    console.log(chalk.dim('  Run: supabase login'));
+  }
+
+  const flyStatus = status.flyctl.authenticated
+    ? chalk.green('✓ Authenticated')
+    : chalk.red('✗ Not authenticated');
+  console.log(chalk.bold('Fly.io (flyctl):'), flyStatus);
+  if (!status.flyctl.authenticated) {
+    console.log(chalk.dim('  Run: flyctl auth login'));
+  }
+
+  console.log();
+}
+
+/**
+ * Display Dovetail preferences
+ */
+function displayPreferences(config) {
+  console.log(chalk.bold('Dovetail Preferences:\n'));
+
+  if (config.githubDefaultOrg) {
+    console.log(chalk.bold('GitHub Default Org:'), config.githubDefaultOrg);
+  } else {
+    console.log(chalk.bold('GitHub Default Org:'), chalk.dim('Personal account'));
+  }
+
+  if (config.supabaseDefaultOrg) {
+    console.log(chalk.bold('Supabase Default Org:'), config.supabaseDefaultOrg);
+  } else {
+    console.log(chalk.bold('Supabase Default Org:'), chalk.dim('Not set'));
+  }
+
+  console.log();
+}
 
 export async function configCommand(options = {}) {
   console.log(chalk.bold('\n🔧 Dovetail Configuration\n'));
 
-  // Always show current config first
+  const spinner = ora('Checking authentication status...').start();
+  const authStatus = await checkAllAuth();
+  spinner.stop();
+
   const currentConfig = await readConfig();
 
   if (options.show) {
     // Just show and exit
-    displayConfig(currentConfig);
+    displayAuthStatus(authStatus);
+    displayPreferences(currentConfig);
     return;
   }
 
+  // Show current status
+  displayAuthStatus(authStatus);
+  displayPreferences(currentConfig);
+
   // Interactive menu
-  const hasAnyConfig = currentConfig.githubToken || currentConfig.linearApiKey ||
-                       currentConfig.supabaseToken || currentConfig.flyToken;
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Set GitHub default organization', value: 'github-org' },
+        { name: 'Set Supabase default organization', value: 'supabase-org' },
+        { name: 'Show authentication help', value: 'auth-help' },
+        { name: 'Clear all preferences', value: 'clear' },
+        { name: 'Exit', value: 'exit' },
+      ],
+    },
+  ]);
 
-  if (hasAnyConfig) {
-    // Show current config
-    console.log(chalk.bold('Current Configuration:\n'));
-    displayConfig(currentConfig);
+  if (action === 'exit') {
+    console.log();
+    return;
+  }
 
-    const { action } = await inquirer.prompt([
+  if (action === 'auth-help') {
+    console.log(chalk.bold('\n📚 Authentication Setup:\n'));
+    console.log(chalk.cyan('GitHub (gh):'));
+    console.log('  Run: gh auth login');
+    console.log('  Then follow the OAuth flow\n');
+
+    console.log(chalk.cyan('Linear (linearis):'));
+    console.log('  1. Get your API key from: https://linear.app/settings/api');
+    console.log('  2. Set environment variable:');
+    console.log('     export LINEAR_API_KEY=<key>');
+    console.log('  3. Add to ~/.zshrc or ~/.bashrc to persist');
+    console.log('  OR create ~/.linearisrc.json:');
+    console.log('     {"apiKey": "<key>"}\n');
+
+    console.log(chalk.cyan('Supabase:'));
+    console.log('  Run: supabase login');
+    console.log('  Then follow the OAuth flow\n');
+
+    console.log(chalk.cyan('Fly.io (flyctl):'));
+    console.log('  Run: flyctl auth login');
+    console.log('  Then follow the OAuth flow\n');
+
+    return;
+  }
+
+  if (action === 'clear') {
+    const { confirmClear } = await inquirer.prompt([
       {
-        type: 'list',
-        name: 'action',
-        message: 'What would you like to do?',
-        choices: [
-          { name: 'Update all tokens', value: 'update-all' },
-          { name: 'Update individual token', value: 'update-one' },
-          { name: 'Change default GitHub organization', value: 'change-github-org' },
-          { name: 'Change default Supabase organization', value: 'change-supabase-org' },
-          { name: 'Clear all configuration', value: 'clear' },
-          { name: 'Exit', value: 'exit' },
-        ],
+        type: 'confirm',
+        name: 'confirmClear',
+        message: chalk.yellow('Are you sure you want to clear all preferences?'),
+        default: false,
       },
     ]);
 
-    if (action === 'exit') {
-      console.log();
-      return;
+    if (confirmClear) {
+      await writeConfig({});
+      logger.success('All preferences cleared!');
     }
-
-    if (action === 'clear') {
-      const { confirmClear } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'confirmClear',
-          message: chalk.yellow('Are you sure you want to clear all tokens?'),
-          default: false,
-        },
-      ]);
-
-      if (confirmClear) {
-        await writeConfig({});
-        logger.success('All tokens cleared!');
-      }
-      console.log();
-      return;
-    }
-
-    if (action === 'change-github-org') {
-      console.log();
-      const spinner = ora('Fetching your GitHub organizations...').start();
-      try {
-        const user = await getAuthenticatedUser();
-        const orgs = await getUserOrganizations();
-        spinner.succeed(`Found ${orgs.length} organization(s)`);
-
-        console.log();
-        const choices = [
-          { name: `Personal account (${user.login})`, value: null },
-          ...orgs.map(org => ({ name: org.login, value: org.login })),
-        ];
-
-        const { defaultOrg } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'defaultOrg',
-            message: 'Where should repositories be created by default?',
-            choices,
-            default: currentConfig.githubDefaultOrg,
-          },
-        ]);
-
-        const updatedConfig = await readConfig();
-        updatedConfig.githubDefaultOrg = defaultOrg;
-        await writeConfig(updatedConfig);
-
-        if (defaultOrg) {
-          logger.success(`Default GitHub organization set to: ${defaultOrg}`);
-        } else {
-          logger.success('Repositories will be created in your personal account');
-        }
-        console.log();
-      } catch (error) {
-        spinner.fail('Could not fetch GitHub organizations');
-        logger.error(error.message);
-        console.log();
-      }
-      return;
-    }
-
-    if (action === 'change-supabase-org') {
-      console.log();
-      const spinner = ora('Fetching your Supabase organizations...').start();
-      try {
-        const orgs = await getSupabaseOrgs();
-        spinner.succeed(`Found ${orgs.length} organization(s)`);
-
-        if (orgs.length === 0) {
-          spinner.warn('No Supabase organizations found. Please create one first.');
-          console.log();
-          return;
-        }
-
-        console.log();
-        const choices = orgs.map(org => ({ name: org.name, value: org.id }));
-
-        const { defaultOrg } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'defaultOrg',
-            message: 'Which Supabase organization should be used for new projects?',
-            choices,
-            default: currentConfig.supabaseDefaultOrg,
-          },
-        ]);
-
-        const updatedConfig = await readConfig();
-        updatedConfig.supabaseDefaultOrg = defaultOrg;
-        await writeConfig(updatedConfig);
-
-        const selectedOrg = orgs.find(org => org.id === defaultOrg);
-        logger.success(`Default Supabase organization set to: ${selectedOrg.name}`);
-        console.log();
-      } catch (error) {
-        spinner.fail('Could not fetch Supabase organizations');
-        logger.error(error.message);
-        console.log();
-      }
-      return;
-    }
-
-    if (action === 'update-one') {
-      const { token } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'token',
-          message: 'Which token do you want to update?',
-          choices: [
-            { name: 'GitHub Token', value: 'githubToken' },
-            { name: 'Linear API Key', value: 'linearApiKey' },
-            { name: 'Supabase Token', value: 'supabaseToken' },
-            { name: 'Fly.io Token', value: 'flyToken' },
-          ],
-        },
-      ]);
-
-      const tokenLabels = {
-        githubToken: 'GitHub Personal Access Token',
-        linearApiKey: 'Linear API Key',
-        supabaseToken: 'Supabase Access Token',
-        flyToken: 'Fly.io API Token',
-      };
-
-      const { value } = await inquirer.prompt([
-        {
-          type: 'password',
-          name: 'value',
-          message: `${tokenLabels[token]}:`,
-          mask: '*',
-        },
-      ]);
-
-      const updatedConfig = await readConfig();
-      updatedConfig[token] = value;
-      await writeConfig(updatedConfig);
-
-      logger.success(`${tokenLabels[token]} updated!`);
-      console.log();
-      return;
-    }
-
-    if (action === 'update-all') {
-      await setupConfig(inquirer);
-    }
-  } else {
-    // No config yet, run setup
-    console.log(chalk.gray('No configuration found. Let\'s set up your API tokens.\n'));
-    await setupConfig(inquirer);
+    console.log();
+    return;
   }
 
-  // Validate the configuration
-  const validation = await validateConfig();
+  if (action === 'github-org') {
+    if (!authStatus.gh.authenticated) {
+      logger.error('Please authenticate with GitHub first: gh auth login');
+      console.log();
+      return;
+    }
 
-  if (validation.valid) {
-    logger.success('All tokens configured correctly!');
-    console.log(chalk.bold('\n📚 Next steps:\n'));
-    console.log(chalk.cyan('  dovetail init "Project Name"'), '  # Create a new project');
+    const { useOrg } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'useOrg',
+        message: 'Use an organization instead of personal account?',
+        default: !!currentConfig.githubDefaultOrg,
+      },
+    ]);
+
+    if (useOrg) {
+      const { orgName } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'orgName',
+          message: 'Organization name:',
+          default: currentConfig.githubDefaultOrg,
+          validate: input => input.length > 0 || 'Organization name is required',
+        },
+      ]);
+
+      const updatedConfig = { ...currentConfig, githubDefaultOrg: orgName };
+      await writeConfig(updatedConfig);
+      logger.success(`Default GitHub organization set to: ${orgName}`);
+    } else {
+      const updatedConfig = { ...currentConfig };
+      delete updatedConfig.githubDefaultOrg;
+      await writeConfig(updatedConfig);
+      logger.success('Repositories will be created in your personal account');
+    }
     console.log();
-  } else {
-    logger.warning('Some tokens are still missing:');
-    validation.errors.forEach(err => console.log(chalk.yellow(`  - ${err}`)));
+    return;
+  }
+
+  if (action === 'supabase-org') {
+    if (!authStatus.supabase.authenticated) {
+      logger.error('Please authenticate with Supabase first: supabase login');
+      console.log();
+      return;
+    }
+
+    const { orgId } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'orgId',
+        message: 'Supabase organization ID:',
+        default: currentConfig.supabaseDefaultOrg,
+        validate: input => input.length > 0 || 'Organization ID is required',
+      },
+    ]);
+
+    const updatedConfig = { ...currentConfig, supabaseDefaultOrg: orgId };
+    await writeConfig(updatedConfig);
+    logger.success(`Default Supabase organization set to: ${orgId}`);
     console.log();
+    return;
   }
 }
