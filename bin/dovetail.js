@@ -26,6 +26,11 @@ import { purgeCommand } from '../src/commands/purge.js';
 import { linearSearchCommand } from '../src/commands/linear-search.js';
 import { prStatusCommand } from '../src/commands/pr-status.js';
 
+// Hook-equivalent commands (Dovetail 2.0)
+import { checkIssue } from '../src/commands/check-issue.js';
+import { validate } from '../src/commands/validate.js';
+import { autoCommit } from '../src/commands/auto-commit.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -161,6 +166,31 @@ program
   .description('Get PR status for current branch (for hooks)')
   .option('--json', 'Output as JSON')
   .action(prStatusCommand);
+
+// Hook-equivalent commands (Dovetail 2.0)
+program
+  .command('check-issue')
+  .description('Ensure active issue exists (user-prompt-submit hook)')
+  .option('--auto', 'Auto-select/create issue without prompts')
+  .option('--quiet', 'Minimal output')
+  .option('--json', 'Output as JSON')
+  .action(checkIssue);
+
+program
+  .command('validate')
+  .description('Validate workflow state (pre-tool-use hook)')
+  .option('--quiet', 'Minimal output')
+  .option('--json', 'Output as JSON')
+  .action(validate);
+
+program
+  .command('auto-commit')
+  .description('Auto-commit changes (post-tool-use hook)')
+  .option('--no-push', 'Skip pushing to remote')
+  .option('--no-linear-comment', 'Skip Linear comment')
+  .option('--quiet', 'Minimal output')
+  .option('--json', 'Output as JSON')
+  .action(autoCommit);
 
 // Error handling
 program.exitOverride();

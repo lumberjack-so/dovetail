@@ -1,151 +1,103 @@
 import chalk from 'chalk';
-import { getCurrentBranch, getChangedFiles, getCommitsAhead } from '../utils/git.js';
-import { readProjectState } from '../utils/state.js';
-import { getCommitStatus } from '../integrations/github.js';
-import { getPullRequestByBranch } from '../integrations/github.js';
-import { logger } from '../utils/logger.js';
+import { loadProjectState } from '../utils/state.js';
+import { getCurrentBranch } from '../utils/git.js';
 
-export async function statusCommand(options = {}) {
+export async function status(options = {}) {
   try {
-    const projectState = await readProjectState(process.cwd());
-
-    if (!projectState.name) {
+    // Check if in a Dovetail project
+    let state;
+    try {
+      state = loadProjectState();
+    } catch (error) {
       if (options.json) {
         console.log(JSON.stringify({ isDovetailProject: false }));
         process.exit(0);
       }
-      logger.error('Not in a Dovetail project directory');
+      console.log(chalk.red('✗ Not in a Dovetail project'));
+      console.log(chalk.dim('  Run `dovetail init` or `dovetail adopt` to get started'));
       process.exit(1);
     }
 
-    // Get git status
+    // Get current branch
     const currentBranch = await getCurrentBranch();
-    const changedFiles = await getChangedFiles();
-    const commitsAhead = await getCommitsAhead();
-
-    // Get PR info
-    let prInfo = null;
-    if (projectState.github && projectState.activeIssue) {
-      try {
-        const pr = await getPullRequestByBranch(
-          projectState.github.owner,
-          projectState.github.repo,
-          currentBranch
-        );
-
-        if (pr) {
-          prInfo = {
-            url: pr.html_url,
-            number: pr.number,
-            state: pr.state,
-            draft: pr.draft
-          };
-        }
-      } catch {
-        // No PR yet
-      }
-    }
-
-    // Get CI status
-    let ciStatus = null;
-    if (projectState.github) {
-      try {
-        const status = await getCommitStatus(
-          projectState.github.owner,
-          projectState.github.repo,
-          currentBranch
-        );
-        ciStatus = status.passing ? 'passing' : 'failing';
-      } catch {
-        ciStatus = 'unknown';
-      }
-    }
 
     // JSON output
     if (options.json) {
-      const jsonOutput = {
+      console.log(JSON.stringify({
         isDovetailProject: true,
-        project: {
-          name: projectState.name,
-          slug: projectState.slug
-        },
-        git: {
-          currentBranch,
-          hasChanges: changedFiles.modified.length > 0 || changedFiles.created.length > 0 || changedFiles.deleted.length > 0,
-          changedFiles: {
-            modified: changedFiles.modified,
-            created: changedFiles.created,
-            deleted: changedFiles.deleted
-          },
-          stagedFiles: changedFiles.staged,
-          commitsAhead
-        },
-        activeIssue: projectState.activeIssue || null,
-        pr: prInfo,
-        ciStatus,
-        github: projectState.github || null,
-        linear: projectState.linear || null,
-        supabase: projectState.supabase || null,
-        fly: projectState.fly || null
-      };
-
-      console.log(JSON.stringify(jsonOutput, null, 2));
+        activeIssue: state.activeIssue || null,
+        branch: currentBranch,
+        github: state.github || null,
+        linear: state.linear || null,
+        supabase: state.supabase || null,
+        flyio: state.flyio || null
+      }, null, 2));
       process.exit(0);
     }
 
     // Human-readable output
-    console.log();
-    console.log(chalk.bold('📁 Project:'), projectState.name);
-    console.log(chalk.bold('🌿 Branch: '), currentBranch);
+    console.log(chalk.bold('\n📊 Dovetail Status\n'));
 
-    // Display active issue
-    if (projectState.activeIssue) {
-      console.log(chalk.bold('📋 Issue:  '), `${projectState.activeIssue.key} - ${projectState.activeIssue.title}`, chalk.gray('(In Progress)'));
-    }
-
-    // Display changes
-    if (changedFiles.modified.length > 0 || changedFiles.created.length > 0 || changedFiles.deleted.length > 0) {
-      console.log(chalk.bold('\n📝 Changes:'));
-
-      changedFiles.modified.forEach(file => {
-        console.log(chalk.yellow('  Modified:'), file);
-      });
-
-      changedFiles.created.forEach(file => {
-        console.log(chalk.green('  Added:   '), file);
-      });
-
-      changedFiles.deleted.forEach(file => {
-        console.log(chalk.red('  Deleted: '), file);
-      });
+    // Active Issue
+    if (state.activeIssue) {
+      console.log(chalk.green('✓ Active Issue'));
+      console.log(chalk.dim('  Key:    ') + chalk.white(state.activeIssue.key));
+      console.log(chalk.dim('  Title:  ') + chalk.white(state.activeIssue.title || 'N/A'));
+      console.log(chalk.dim('  Branch: ') + chalk.white(state.activeIssue.branch || 'N/A'));
     } else {
-      console.log(chalk.gray('\n📝 No uncommitted changes'));
+      console.log(chalk.yellow('⚠ No active issue'));
+      console.log(chalk.dim('  Run `dovetail check-issue` to select or create one'));
     }
 
-    // Display commits ahead
-    if (commitsAhead > 0) {
-      console.log(chalk.bold('\n📤 Commits ahead of origin:'), commitsAhead);
+    console.log();
+
+    // Git Branch
+    if (currentBranch) {
+      console.log(chalk.cyan('Git Branch'));
+      console.log(chalk.dim('  Current: ') + chalk.white(currentBranch));
     }
 
-    // Display CI
-    if (ciStatus) {
-      const statusIcon = ciStatus === 'passing' ? '✅' : ciStatus === 'failing' ? '❌' : '⚪';
-      const statusText = ciStatus === 'passing' ? 'Passing' : ciStatus === 'failing' ? 'Failing' : 'Not available';
-      console.log(chalk.bold('\n🔄 CI Status:'), statusIcon, statusText);
+    console.log();
+
+    // GitHub
+    if (state.github) {
+      console.log(chalk.cyan('GitHub'));
+      console.log(chalk.dim('  Repo:  ') + chalk.white(`${state.github.owner}/${state.github.repo}`));
+      if (state.github.url) {
+        console.log(chalk.dim('  URL:   ') + chalk.white(state.github.url));
+      }
     }
 
-    // Display PR
-    if (prInfo) {
-      console.log(chalk.bold('\n🔀 PR:      '), prInfo.url, prInfo.draft ? chalk.gray('(Draft)') : '');
+    console.log();
+
+    // Linear
+    if (state.linear) {
+      console.log(chalk.cyan('Linear'));
+      console.log(chalk.dim('  Team:    ') + chalk.white(state.linear.teamId || 'N/A'));
+      console.log(chalk.dim('  Project: ') + chalk.white(state.linear.projectId || 'N/A'));
     }
 
-    // Display useful links
-    if (projectState.activeIssue) {
-      console.log(chalk.bold('\n🔗 Links:'));
-      console.log(chalk.blue('  Linear: '), projectState.activeIssue.url);
+    console.log();
 
-      if (projectState.github) {
-        console.log(chalk.blue('  GitHub: '), projectState.github.url);
+    // Supabase
+    if (state.supabase) {
+      console.log(chalk.cyan('Supabase'));
+      console.log(chalk.dim('  Project: ') + chalk.white(state.supabase.projectRef || 'N/A'));
+      if (state.supabase.url) {
+        console.log(chalk.dim('  URL:     ') + chalk.white(state.supabase.url));
+      }
+    }
+
+    console.log();
+
+    // Fly.io
+    if (state.flyio) {
+      console.log(chalk.cyan('Fly.io'));
+      if (state.flyio.staging) {
+        console.log(chalk.dim('  Staging:    ') + chalk.white(state.flyio.staging));
+      }
+      if (state.flyio.production) {
+        console.log(chalk.dim('  Production: ') + chalk.white(state.flyio.production));
       }
     }
 
@@ -155,7 +107,10 @@ export async function statusCommand(options = {}) {
       console.log(JSON.stringify({ error: error.message }));
       process.exit(1);
     }
-    logger.error(`Failed to get status: ${error.message}`);
+    console.error(chalk.red('Error:'), error.message);
     process.exit(1);
   }
 }
+
+// Backwards compatibility
+export const statusCommand = status;

@@ -1,114 +1,132 @@
-import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { getOpenIssues, getIssueByKey, updateIssueStatus, formatIssue } from '../integrations/linear.js';
-import { createBranch, checkout, pull, getDefaultBranch } from '../utils/git.js';
-import { readProjectState, updateProjectState } from '../utils/state.js';
-import { createBranchName } from '../utils/slugify-helper.js';
-import { logger } from '../utils/logger.js';
-import { validateConfig } from '../utils/config.js';
+import slugify from 'slugify';
+import { loadProjectState, saveProjectState } from '../utils/state.js';
+import { showIssue, updateIssue, listWorkflowStates } from '../cli/linearis.js';
+import { createBranch, checkout, pull, getDefaultBranch, getCurrentBranch } from '../utils/git.js';
 
-export async function startCommand(issueKey) {
-  console.log(chalk.bold('\n🚀 Starting work...\n'));
+/**
+ * Create branch name from issue key and title
+ */
+function createBranchName(issueKey, issueTitle) {
+  const titleSlug = slugify(issueTitle, {
+    lower: true,
+    strict: true,
+    trim: true
+  }).substring(0, 50); // Limit length
 
-  // Validate configuration
-  const configCheck = await validateConfig();
-  if (!configCheck.valid) {
-    logger.error('Configuration incomplete. Please run: dovetail config');
-    process.exit(1);
-  }
+  return `feat/${issueKey.toLowerCase()}-${titleSlug}`;
+}
 
-  // Get project state
-  const projectState = await readProjectState(process.cwd());
-  if (!projectState.linear) {
-    logger.error('Project not initialized. Run: dovetail init');
-    process.exit(1);
-  }
+/**
+ * Start work on a Linear issue
+ */
+export async function start(options = {}) {
+  try {
+    const { issueKey, quiet } = options;
 
-  logger.info('Environment check... ✅');
-
-  // Sync main branch
-  logger.info('Syncing main branch...');
-  const mainBranch = await getDefaultBranch();
-  await checkout(mainBranch);
-  await pull(mainBranch);
-  logger.success('Synced!');
-
-  let selectedIssue;
-
-  if (issueKey) {
-    // Start specific issue
-    logger.info(`Loading issue ${issueKey}...`);
-    const issue = await getIssueByKey(issueKey);
-    selectedIssue = formatIssue(issue);
-  } else {
-    // Query Linear for open issues
-    logger.info('Querying Linear...\n');
-    const issues = await getOpenIssues(projectState.linear.teamId, 10);
-
-    if (issues.length === 0) {
-      logger.warning('No open issues found in Linear.');
-      process.exit(0);
+    if (!issueKey) {
+      console.error(chalk.red('Error: Issue key is required'));
+      console.error(chalk.dim('Usage: dovetail start <issue-key>'));
+      process.exit(1);
     }
 
-    // Format issues for display
-    const choices = await Promise.all(
-      issues.map(async (issue) => {
-        const formatted = formatIssue(issue);
-        const estimate = formatted.estimate ? `${formatted.estimate}h` : 'No estimate';
-        const priority = ['Urgent', 'High', 'Medium', 'Low'][formatted.priority - 1] || 'None';
+    // Load project state
+    const state = loadProjectState();
 
-        return {
-          name: `${formatted.key}: ${formatted.title} (${estimate}, priority: ${priority})`,
-          value: formatted,
-        };
-      })
-    );
+    if (!quiet) {
+      console.log(chalk.bold('\n🚀 Starting work...\n'));
+    }
 
-    console.log(chalk.bold('Open issues:\n'));
-    const { issue } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'issue',
-        message: 'Which issue do you want to work on?',
-        choices,
-      },
-    ]);
+    // Sync main branch
+    if (!quiet) {
+      console.log(chalk.dim('Syncing main branch...'));
+    }
+    const mainBranch = await getDefaultBranch();
+    const currentBranch = await getCurrentBranch();
 
-    selectedIssue = issue;
-  }
+    if (currentBranch !== mainBranch) {
+      await checkout(mainBranch);
+    }
+    await pull(mainBranch);
 
-  // Show issue details
-  console.log();
-  console.log(chalk.bold('📝 Starting work on'), chalk.cyan(selectedIssue.key));
-  console.log(chalk.gray(selectedIssue.title));
-  console.log();
+    // Get issue details from Linear
+    if (!quiet) {
+      console.log(chalk.dim(`Loading issue ${issueKey}...`));
+    }
 
-  // Create branch
-  const branchName = createBranchName(selectedIssue.key, selectedIssue.title);
-  logger.info(`Creating branch: ${branchName}`);
+    const issue = await showIssue(issueKey);
 
-  try {
-    await createBranch(branchName);
+    // Create branch name
+    const branchName = createBranchName(issue.identifier, issue.title);
+
+    if (!quiet) {
+      console.log();
+      console.log(chalk.cyan(`📝 Starting work on ${issue.identifier}`));
+      console.log(chalk.dim(issue.title));
+      console.log();
+      console.log(chalk.dim(`Creating branch: ${branchName}`));
+    }
+
+    // Create and checkout branch
+    try {
+      await createBranch(branchName);
+    } catch (error) {
+      // Branch might already exist - just check it out
+      if (error.message.includes('already exists')) {
+        await checkout(branchName);
+        if (!quiet) {
+          console.log(chalk.yellow('Branch already exists - checked out'));
+        }
+      } else {
+        throw error;
+      }
+    }
 
     // Update Linear issue to "In Progress"
-    logger.info('Moving issue to "In Progress"...');
-    await updateIssueStatus(selectedIssue.id, 'In Progress');
-    logger.success('Updated!');
+    try {
+      // Get workflow states to find "In Progress" state
+      const states = await listWorkflowStates(state.linear.teamId);
+      const inProgressState = states.find(s =>
+        s.name.toLowerCase().includes('progress') ||
+        s.type === 'started'
+      );
+
+      if (inProgressState) {
+        if (!quiet) {
+          console.log(chalk.dim('Moving issue to "In Progress"...'));
+        }
+        await updateIssue(issue.identifier, {
+          stateId: inProgressState.id
+        });
+      }
+    } catch (error) {
+      // Non-critical - continue even if state update fails
+      if (!quiet) {
+        console.log(chalk.yellow(`Warning: Could not update issue state: ${error.message}`));
+      }
+    }
 
     // Save active issue to project state
-    await updateProjectState(process.cwd(), {
-      activeIssue: {
-        key: selectedIssue.key,
-        id: selectedIssue.id,
-        title: selectedIssue.title,
-        branch: branchName,
-        url: selectedIssue.url,
-      },
-    });
+    state.activeIssue = {
+      key: issue.identifier,
+      id: issue.id,
+      title: issue.title,
+      branch: branchName,
+      url: issue.url
+    };
 
-    console.log(chalk.green.bold('\n✨ Ready to code! 🚀\n'));
+    saveProjectState(state);
+
+    if (!quiet) {
+      console.log(chalk.green('\n✨ Ready to code!\n'));
+    }
+
+    return issue;
   } catch (error) {
-    logger.error(`Failed to start work: ${error.message}`);
+    console.error(chalk.red('Error starting work:'), error.message);
     process.exit(1);
   }
 }
+
+// Backwards compatibility
+export const startCommand = start;
