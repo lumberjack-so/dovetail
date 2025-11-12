@@ -138,23 +138,92 @@ export async function configCommand(options = {}) {
   displayAuthStatus(authStatus);
   displayPreferences(currentConfig);
 
+  // Build menu choices based on auth status
+  const menuChoices = [];
+
+  // Add Linear API key setup if not authenticated
+  if (!authStatus.linearis.authenticated) {
+    menuChoices.push({ name: '🔑 Set Linear API key', value: 'linear-api-key' });
+  }
+
+  menuChoices.push(
+    { name: 'Set GitHub default organization', value: 'github-org' },
+    { name: 'Set Supabase default organization', value: 'supabase-org' },
+    { name: 'Show authentication help', value: 'auth-help' },
+    { name: 'Clear all preferences', value: 'clear' },
+    { name: 'Exit', value: 'exit' }
+  );
+
   // Interactive menu
   const { action } = await inquirer.prompt([
     {
       type: 'list',
       name: 'action',
       message: 'What would you like to do?',
-      choices: [
-        { name: 'Set GitHub default organization', value: 'github-org' },
-        { name: 'Set Supabase default organization', value: 'supabase-org' },
-        { name: 'Show authentication help', value: 'auth-help' },
-        { name: 'Clear all preferences', value: 'clear' },
-        { name: 'Exit', value: 'exit' },
-      ],
+      choices: menuChoices,
     },
   ]);
 
   if (action === 'exit') {
+    console.log();
+    return;
+  }
+
+  if (action === 'linear-api-key') {
+    console.log(chalk.bold('\n🔑 Linear API Key Setup\n'));
+    console.log('Get your API key from:', chalk.cyan('https://linear.app/settings/api'));
+    console.log();
+
+    const { apiKey } = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'apiKey',
+        message: 'Enter your Linear API key:',
+        mask: '*',
+        validate: input => {
+          if (!input || input.length === 0) {
+            return 'API key is required';
+          }
+          if (input.length < 20) {
+            return 'API key seems too short';
+          }
+          return true;
+        },
+      },
+    ]);
+
+    // Save to ~/.linearisrc.json
+    const { homedir } = await import('os');
+    const { writeFile } = await import('fs/promises');
+    const { join } = await import('path');
+
+    const linearisConfigPath = join(homedir(), '.linearisrc.json');
+    const linearisConfig = { apiKey };
+
+    try {
+      await writeFile(linearisConfigPath, JSON.stringify(linearisConfig, null, 2));
+      logger.success('API key saved to ~/.linearisrc.json');
+
+      // Test authentication
+      const spinner = ora('Testing authentication...').start();
+      try {
+        const testAuth = await checkLinearisAuth();
+        if (testAuth.authenticated) {
+          spinner.succeed('Authentication successful!');
+          console.log();
+          console.log(chalk.green('✓ You can now use Linear commands with dovetail'));
+        } else {
+          spinner.fail('Authentication failed');
+          logger.error('The API key might be invalid. Please check and try again.');
+        }
+      } catch (error) {
+        spinner.fail('Authentication test failed');
+        logger.error(error.message);
+      }
+    } catch (error) {
+      logger.error(`Failed to save API key: ${error.message}`);
+    }
+
     console.log();
     return;
   }
