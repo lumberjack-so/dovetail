@@ -1,7 +1,7 @@
 {
   "name": "@lumberjack-so/dovetail",
-  "version": "1.0.20",
-  "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow",
+  "version": "2.0.0",
+  "description": "An opinionated CLI that scaffolds and automates the entire PERN stack development workflow with native CLI delegation",
   "main": "src/index.js",
   "bin": {
     "dovetail": "./bin/dovetail.js"
@@ -55,20 +55,15 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
-    "inquirer": "^9.2.12",
-    "ora": "^8.0.1",
+    "conventional-commits-parser": "^5.0.0",
+    "dotenv": "^16.3.1",
     "execa": "^8.0.1",
     "fs-extra": "^11.2.0",
-    "octokit": "^3.1.2",
-    "@linear/sdk": "^24.0.0",
-    "dotenv": "^16.3.1",
-    "axios": "^1.6.2",
-    "simple-git": "^3.21.0",
+    "inquirer": "^9.2.12",
     "listr2": "^8.0.0",
-    "conventional-commits-parser": "^5.0.0",
-    "slugify": "^1.6.6",
-    "tweetnacl": "^1.0.3",
-    "tweetnacl-util": "^0.15.1"
+    "ora": "^8.0.1",
+    "simple-git": "^3.21.0",
+    "slugify": "^1.6.6"
   },
   "devDependencies": {
     "eslint": "^8.55.0"
