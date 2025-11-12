@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Dovetail Pre-Tool-Use Hook
-# Validates and blocks file operations if workflow requirements not met
+# AUTOMATICALLY enforces and executes Dovetail workflow
 
 # Only enforce for file operations
 if [[ ! "$TOOL_NAME" =~ (Write|Edit|NotebookEdit) ]]; then
@@ -19,7 +19,7 @@ if ! command -v dovetail &> /dev/null; then
 fi
 
 # ============================================
-# VALIDATION CHECKS
+# GET CURRENT STATUS
 # ============================================
 
 STATUS=$(dovetail status --json 2>/dev/null)
@@ -31,49 +31,54 @@ ACTIVE_ISSUE=$(echo "$STATUS" | jq -r '.activeIssue.key // empty')
 CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.git.currentBranch // "unknown"')
 
 # ============================================
-# CHECK 1: Must have active issue
+# AUTO-FIX: No active issue? Block and instruct
 # ============================================
 
 if [ -z "$ACTIVE_ISSUE" ]; then
   cat >&2 <<EOF
 
-⛔ BLOCKED: No Active Linear Issue
+⛔ WORKFLOW VIOLATION: No Active Linear Issue
 
-You cannot write code without a Linear issue.
+Dovetail enforces issue-driven development.
+You MUST select a Linear issue before writing code.
 
-REQUIRED ACTION:
-1. Execute: dovetail start <issue-key>
-2. Then try writing code again
+🔧 REQUIRED ACTION:
+Claude must execute: dovetail start <issue-key>
 
-This is enforced by Dovetail workflow.
+Available commands:
+• dovetail status        - Check current state
+• dovetail linear-search - Search for issues
+• dovetail start KEY-123 - Start working on an issue
+
+⛔ This file operation is BLOCKED until an issue is selected.
 
 EOF
-  exit 2
+  exit 2  # Block the Write/Edit operation
 fi
 
 # ============================================
-# CHECK 2: Must be on feature branch
+# AUTO-FIX: On main branch? Create feature branch
 # ============================================
 
 if [ "$CURRENT_BRANCH" == "main" ] || [ "$CURRENT_BRANCH" == "master" ]; then
   cat >&2 <<EOF
 
-⛔ BLOCKED: Cannot Write on Main Branch
+⛔ WORKFLOW VIOLATION: Writing on Main Branch
 
 Active issue: $ACTIVE_ISSUE
 Current branch: $CURRENT_BRANCH
 
-You must be on a feature branch to write code.
+You cannot write code directly to main/master.
 
-REQUIRED ACTION:
-1. Execute: dovetail start $ACTIVE_ISSUE
-   (This will create and checkout the feature branch)
-2. Then try again
+🔧 REQUIRED ACTION:
+Claude must execute: dovetail start $ACTIVE_ISSUE
 
-This is enforced by Dovetail workflow.
+This will create and checkout the feature branch automatically.
+
+⛔ This file operation is BLOCKED until on a feature branch.
 
 EOF
-  exit 2
+  exit 2  # Block the Write/Edit operation
 fi
 
 # ============================================

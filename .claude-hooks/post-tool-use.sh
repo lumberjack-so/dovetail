@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Dovetail Post-Tool-Use Hook
-# Suggests commit after significant work
+# Tracks changes and suggests workflow checkpoints
 
 # Only for file operations
 if [[ ! "$TOOL_NAME" =~ (Write|Edit) ]]; then
@@ -24,44 +24,54 @@ if [ $? -ne 0 ]; then
   exit 0
 fi
 
+ACTIVE_ISSUE=$(echo "$STATUS" | jq -r '.activeIssue.key // empty')
+CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.git.currentBranch // "unknown"')
 HAS_CHANGES=$(echo "$STATUS" | jq -r '.git.hasChanges')
 CHANGED_COUNT=$(echo "$STATUS" | jq -r '[.git.changedFiles.modified[], .git.changedFiles.created[]] | length')
 
-# Show status
+# Show status based on changes
 if [ "$HAS_CHANGES" == "true" ]; then
-  if [ "$CHANGED_COUNT" -ge 3 ]; then
+  if [ "$CHANGED_COUNT" -ge 5 ]; then
     cat <<EOF
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 WORKFLOW CHECKPOINT
+💡 WORKFLOW CHECKPOINT RECOMMENDED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You've modified $CHANGED_COUNT files. Consider committing soon.
+📊 Status:
+• Active Issue: $ACTIVE_ISSUE
+• Branch: $CURRENT_BRANCH
+• Files Modified: $CHANGED_COUNT
 
-When ready to commit:
-→ Execute: dovetail commit
+You've made significant changes ($CHANGED_COUNT files).
 
-This will:
-• Run security and quality checks
-• Run automated tests
-• Create/update PR
-• Update Linear issue
+🔧 RECOMMENDED ACTION:
+When this feature/fix is complete, Claude should execute:
 
-Or continue coding if not ready.
+→ dovetail commit
+
+This will automatically:
+• Run security & quality checks
+• Execute automated tests
+• Create/update GitHub PR
+• Update Linear issue to "In Review"
+• Link all changes to $ACTIVE_ISSUE
+
+Or continue coding if not ready yet.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 EOF
   else
     cat <<EOF
 
-📝 Dovetail: $CHANGED_COUNT file(s) modified
+📝 Dovetail Tracking: $CHANGED_COUNT file(s) modified on $ACTIVE_ISSUE
 
 EOF
   fi
 else
   cat <<EOF
 
-📝 Dovetail: File operation completed
+📝 Dovetail: File operation completed (no uncommitted changes)
 
 EOF
 fi
