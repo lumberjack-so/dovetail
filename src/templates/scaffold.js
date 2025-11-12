@@ -384,6 +384,9 @@ Health check endpoint.
 }
 
 export async function createClaudeCodeHooks(projectDir, config) {
+  // Ensure .claude/hooks directory exists
+  await fs.mkdir(join(projectDir, '.claude/hooks'), { recursive: true });
+
   // Path to hook templates in dovetail installation
   const hooksTemplateDir = join(__dirname, '../../.claude-hooks');
 
