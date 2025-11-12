@@ -383,7 +383,7 @@ Health check endpoint.
   );
 }
 
-async function createClaudeCodeHooks(projectDir, config) {
+export async function createClaudeCodeHooks(projectDir, config) {
   // Path to hook templates in dovetail installation
   const hooksTemplateDir = join(__dirname, '../../.claude-hooks');
 

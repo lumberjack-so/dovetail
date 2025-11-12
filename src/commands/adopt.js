@@ -7,6 +7,7 @@ import { getRemoteUrl, getCurrentBranch } from '../utils/git.js';
 import { getAuthenticatedUser, getRepository } from '../integrations/github.js';
 import { getTeams } from '../integrations/linear.js';
 import { getOrganizations as getSupabaseOrgs } from '../integrations/supabase.js';
+import { createClaudeCodeHooks } from '../templates/scaffold.js';
 import { logger } from '../utils/logger.js';
 import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
@@ -294,6 +295,16 @@ export async function adoptCommand() {
     await writeProjectState(process.cwd(), state);
 
     saveSpinner.succeed('Dovetail state created!');
+
+    // Install Claude Code hooks
+    const hooksSpinner = ora('Installing Claude Code hooks...').start();
+    try {
+      await createClaudeCodeHooks(process.cwd(), { slug: projectSlug, name: projectName });
+      hooksSpinner.succeed('Claude Code hooks installed!');
+    } catch (error) {
+      hooksSpinner.warn('Could not install hooks (optional)');
+      console.log(chalk.gray(`  ${error.message}`));
+    }
 
     console.log(chalk.bold.green('\n✨ Project adopted successfully!\n'));
     console.log(chalk.bold('Next steps:\n'));
