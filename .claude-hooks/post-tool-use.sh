@@ -29,7 +29,6 @@ if git diff --quiet && git diff --cached --quiet; then
 fi
 
 # Call auto-commit command
-echo "📝 Auto-committing changes..." >&2
-dovetail auto-commit --quiet
+dovetail auto-commit
 
 exit 0

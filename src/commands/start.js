@@ -34,12 +34,12 @@ export async function start(options = {}) {
     const state = loadProjectState();
 
     if (!quiet) {
-      console.log(chalk.bold('\n🚀 Starting work...\n'));
+      console.error(chalk.dim('   Starting work on issue...'));
     }
 
     // Sync main branch
     if (!quiet) {
-      console.log(chalk.dim('Syncing main branch...'));
+      console.error(chalk.dim('   Syncing main branch...'));
     }
     const mainBranch = await getDefaultBranch();
     const currentBranch = await getCurrentBranch();
@@ -51,7 +51,7 @@ export async function start(options = {}) {
 
     // Get issue details from Linear
     if (!quiet) {
-      console.log(chalk.dim(`Loading issue ${issueKey}...`));
+      console.error(chalk.dim(`   Loading issue details from Linear...`));
     }
 
     const issue = await showIssue(issueKey);
@@ -60,22 +60,22 @@ export async function start(options = {}) {
     const branchName = createBranchName(issue.identifier, issue.title);
 
     if (!quiet) {
-      console.log();
-      console.log(chalk.cyan(`📝 Starting work on ${issue.identifier}`));
-      console.log(chalk.dim(issue.title));
-      console.log();
-      console.log(chalk.dim(`Creating branch: ${branchName}`));
+      console.error(chalk.green(`   ✓ Issue: ${issue.identifier} - ${issue.title}`));
+      console.error(chalk.dim(`   Creating branch: ${branchName}`));
     }
 
     // Create and checkout branch
     try {
       await createBranch(branchName);
+      if (!quiet) {
+        console.error(chalk.green(`   ✓ Branch created and checked out`));
+      }
     } catch (error) {
       // Branch might already exist - just check it out
       if (error.message.includes('already exists')) {
         await checkout(branchName);
         if (!quiet) {
-          console.log(chalk.yellow('Branch already exists - checked out'));
+          console.error(chalk.yellow('   Branch already exists - checked out'));
         }
       } else {
         throw error;
@@ -93,16 +93,19 @@ export async function start(options = {}) {
 
       if (inProgressState) {
         if (!quiet) {
-          console.log(chalk.dim('Moving issue to "In Progress"...'));
+          console.error(chalk.dim('   Moving issue to "In Progress" in Linear...'));
         }
         await updateIssue(issue.identifier, {
           stateId: inProgressState.id
         });
+        if (!quiet) {
+          console.error(chalk.green(`   ✓ Issue moved to "In Progress"`));
+        }
       }
     } catch (error) {
       // Non-critical - continue even if state update fails
       if (!quiet) {
-        console.log(chalk.yellow(`Warning: Could not update issue state: ${error.message}`));
+        console.error(chalk.yellow(`   Warning: Could not update issue state: ${error.message}`));
       }
     }
 
@@ -118,7 +121,7 @@ export async function start(options = {}) {
     saveProjectState(state);
 
     if (!quiet) {
-      console.log(chalk.green('\n✨ Ready to code!\n'));
+      console.error(chalk.green('   ✓ Ready to code!'));
     }
 
     return issue;

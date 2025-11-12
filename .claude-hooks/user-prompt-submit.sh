@@ -15,6 +15,6 @@ fi
 
 # Call check-issue command in auto mode
 # This will automatically select/create an issue and start it if needed
-dovetail check-issue --auto --quiet
+dovetail check-issue --auto
 
 exit 0

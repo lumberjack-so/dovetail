@@ -16,7 +16,7 @@ export async function checkIssue(options = {}) {
       state = loadProjectState();
     } catch (error) {
       if (!options.quiet) {
-        console.log(chalk.dim('Not in a Dovetail project - check skipped'));
+        console.error(chalk.dim('Not in a Dovetail project - check skipped'));
       }
       process.exit(0);
     }
@@ -29,14 +29,15 @@ export async function checkIssue(options = {}) {
           issue: state.activeIssue
         }));
       } else if (!options.quiet) {
-        console.log(chalk.green(`✓ Active issue: ${state.activeIssue.key}`));
+        console.error(chalk.green(`✓ Active issue: ${state.activeIssue.key}`));
       }
       process.exit(0);
     }
 
     // No active issue - search Linear
     if (!options.quiet) {
-      console.log(chalk.yellow('⚠️  No active issue - searching Linear...'));
+      console.error(chalk.yellow('📋 Dovetail: Checking for active issue...'));
+      console.error(chalk.dim(`   Searching Linear (team: ${state.linear.teamId})...`));
     }
 
     const issues = await listIssues(state.linear.teamId, state.linear.projectId, {
@@ -49,7 +50,8 @@ export async function checkIssue(options = {}) {
       if (issues.length === 0) {
         // No issues - create a placeholder
         if (!options.quiet) {
-          console.log(chalk.yellow('No open issues found - creating placeholder issue...'));
+          console.error(chalk.yellow('   No open issues found'));
+          console.error(chalk.dim('   Creating placeholder issue...'));
         }
 
         const newIssue = await createIssue(state.linear.teamId, {
@@ -60,7 +62,7 @@ export async function checkIssue(options = {}) {
         });
 
         if (!options.quiet) {
-          console.log(chalk.green(`✓ Created issue: ${newIssue.identifier}`));
+          console.error(chalk.green(`   ✓ Created issue: ${newIssue.identifier}`));
         }
 
         await start({ issueKey: newIssue.identifier, quiet: options.quiet });
@@ -77,7 +79,8 @@ export async function checkIssue(options = {}) {
         const selectedIssue = issues[0];
 
         if (!options.quiet) {
-          console.log(chalk.green(`✓ Auto-selected issue: ${selectedIssue.identifier} - ${selectedIssue.title}`));
+          console.error(chalk.green(`   ✓ Found ${issues.length} open issue(s)`));
+          console.error(chalk.dim(`   Auto-selected: ${selectedIssue.identifier} - ${selectedIssue.title}`));
         }
 
         await start({ issueKey: selectedIssue.identifier, quiet: options.quiet });
