@@ -1,8 +1,10 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { execa } from 'execa';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
 import { checkAuth as checkGhAuth } from '../cli/gh.js';
-import { checkAuth as checkLinearisAuth } from '../cli/linearis.js';
 import { checkAuth as checkSupabaseAuth } from '../cli/supabase.js';
 import { checkAuth as checkFlyctlAuth } from '../cli/flyctl.js';
 
@@ -16,6 +18,19 @@ async function checkCLIInstalled(name, command) {
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Check Linear API token
+ */
+async function checkLinearAPI() {
+  const tokenPath = join(homedir(), '.linear_api_token');
+  const exists = existsSync(tokenPath);
+
+  return {
+    authenticated: exists,
+    info: exists ? 'Token found at ~/.linear_api_token' : null
+  };
 }
 
 /**
@@ -59,6 +74,33 @@ async function checkCLI(name, command, checkAuthFn, installInstructions) {
 }
 
 /**
+ * Check API token (no CLI installation required)
+ */
+async function checkAPIToken(name, checkAuthFn, setupInstructions) {
+  const spinner = ora(`Checking ${name}...`).start();
+
+  const authResult = await checkAuthFn();
+
+  if (authResult.authenticated) {
+    spinner.succeed(`${name} configured`);
+    return {
+      name,
+      installed: true,
+      authenticated: true,
+      info: authResult.info || null
+    };
+  } else {
+    spinner.fail(`${name} not configured`);
+    return {
+      name,
+      installed: false,
+      authenticated: false,
+      installInstructions: setupInstructions
+    };
+  }
+}
+
+/**
  * Onboard command - check CLI installations and guide setup
  */
 export async function onboard(options = {}) {
@@ -81,19 +123,16 @@ export async function onboard(options = {}) {
         auth: 'gh auth login'
       }
     ),
-    linearis: await checkCLI(
-      'Linearis',
-      'linearis',
-      checkLinearisAuth,
+    linear: await checkAPIToken(
+      'Linear API',
+      checkLinearAPI,
       {
-        description: 'Linear CLI for issue management',
-        install: [
-          'npm install -g linearis'
-        ],
+        description: 'Linear API token for issue management',
+        install: [],
         auth: [
-          '1. Get API key: https://linear.app/settings/api',
-          '2. export LINEAR_API_KEY=<your-key>',
-          '3. Or create ~/.linearisrc.json with: { "apiKey": "<your-key>" }'
+          '1. Get API key from: https://linear.app/settings/api',
+          '2. Run: dovetail config',
+          '3. Or manually create ~/.linear_api_token with your API key'
         ]
       }
     ),
@@ -145,13 +184,29 @@ export async function onboard(options = {}) {
 
   Object.values(results).forEach(result => {
     if (!result.installed) {
-      console.log(chalk.bold(`📦 Install ${result.name}:`));
-      console.log(chalk.dim(`   ${result.installInstructions.description}`));
-      console.log();
-      result.installInstructions.install.forEach(cmd => {
-        console.log(chalk.cyan(`   ${cmd}`));
-      });
-      console.log();
+      // For API tokens without installation
+      if (result.installInstructions.install.length === 0) {
+        console.log(chalk.bold(`🔐 Configure ${result.name}:`));
+        console.log(chalk.dim(`   ${result.installInstructions.description}`));
+        console.log();
+        const authInstructions = Array.isArray(result.installInstructions.auth)
+          ? result.installInstructions.auth
+          : [result.installInstructions.auth];
+
+        authInstructions.forEach(instruction => {
+          console.log(chalk.cyan(`   ${instruction}`));
+        });
+        console.log();
+      } else {
+        // For CLIs that need installation
+        console.log(chalk.bold(`📦 Install ${result.name}:`));
+        console.log(chalk.dim(`   ${result.installInstructions.description}`));
+        console.log();
+        result.installInstructions.install.forEach(cmd => {
+          console.log(chalk.cyan(`   ${cmd}`));
+        });
+        console.log();
+      }
     } else if (!result.authenticated) {
       console.log(chalk.bold(`🔐 Authenticate ${result.name}:`));
       console.log();
