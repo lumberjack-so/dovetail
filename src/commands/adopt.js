@@ -8,11 +8,10 @@ import { join } from 'path';
 
 // Native CLI wrappers
 import { getCurrentRepo, viewRepo } from '../cli/gh.js';
-import { listTeams, listProjects } from '../cli/linearis.js';
 import { listProjects as listSupabaseProjects } from '../cli/supabase.js';
 
 // Utilities
-import { loadProjectState, saveProjectState } from '../utils/state.js';
+import { loadProjectState, saveProjectState, readConfig } from '../utils/state.js';
 import { getRemoteUrl } from '../utils/git.js';
 
 /**
@@ -83,42 +82,29 @@ export async function adoptCommand() {
 
     console.log();
 
-    // Step 2: Get Linear project
-    console.log(chalk.bold('2. Linear Project'));
-    const linearSpinner = ora('Fetching Linear teams and projects...').start();
+    // Step 2: Get Linear team key
+    console.log(chalk.bold('2. Linear Team'));
+    const savedConfig = await readConfig();
 
-    let linearTeamId;
-    try {
-      const teams = await listTeams();
-
-      if (teams.length === 0) {
-        linearSpinner.fail('No Linear teams found');
-        console.log(chalk.red('Create a team first at https://linear.app'));
-        process.exit(1);
-      }
-
-      linearSpinner.succeed(`Found ${teams.length} team(s)`);
-
-      // Prompt user to select team
-      const { selectedTeam } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'selectedTeam',
-          message: 'Select the Linear team:',
-          choices: teams.map(team => ({
-            name: team.name,
-            value: team.id
-          }))
+    const { linearTeamKey } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'linearTeamKey',
+        message: 'Linear team key (e.g., ENG, PROD):',
+        default: savedConfig.linearTeamKey || undefined,
+        validate: (input) => {
+          if (!input || input.trim().length === 0) {
+            return 'Team key is required. Find it in your Linear URL: linear.app/[workspace]/team/[TEAM-KEY]';
+          }
+          if (!/^[A-Z0-9-]+$/i.test(input)) {
+            return 'Team key should only contain letters, numbers, and hyphens';
+          }
+          return true;
         }
-      ]);
+      }
+    ]);
 
-      linearTeamId = selectedTeam;
-      console.log(chalk.green(`✓ Linear team selected\n`));
-    } catch (error) {
-      linearSpinner.fail('Failed to fetch Linear teams');
-      console.error(chalk.red('Error:'), error.message);
-      process.exit(1);
-    }
+    console.log(chalk.green(`✓ Linear team key: ${linearTeamKey}\n`));
 
     // Step 3: Get Supabase project (optional)
     console.log(chalk.bold('3. Supabase Project (Optional)'));
@@ -222,7 +208,7 @@ export async function adoptCommand() {
     // Summary
     console.log(chalk.bold('\n📋 Summary:\n'));
     console.log(chalk.cyan('GitHub:    ') + `${githubOwner}/${githubRepo}`);
-    console.log(chalk.cyan('Linear:    ') + `Team ID: ${linearTeamId}`);
+    console.log(chalk.cyan('Linear:    ') + `Team: ${linearTeamKey}`);
     if (supabaseUrl) console.log(chalk.cyan('Supabase:  ') + supabaseUrl);
     if (flyStaging) console.log(chalk.cyan('Staging:   ') + flyStaging);
     if (flyProduction) console.log(chalk.cyan('Production:') + flyProduction);
@@ -254,8 +240,7 @@ export async function adoptCommand() {
         url: `https://github.com/${githubOwner}/${githubRepo}`
       },
       linear: {
-        teamId: linearTeamId,
-        projectId: null // Linear projects are team-based in 2.0
+        teamKey: linearTeamKey
       }
     };
 
