@@ -263,7 +263,7 @@ export async function adoptCommand() {
       await mkdir(dovetailDir, { recursive: true });
     }
 
-    saveProjectState(state);
+    await saveProjectState(process.cwd(), state);
     saveSpinner.succeed('Dovetail state created!');
 
     // Install Claude Code hooks
