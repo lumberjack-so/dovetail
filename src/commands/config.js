@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import { execa } from 'execa';
-import { readConfig, writeConfig } from '../utils/state.js';
+import { readConfig, writeConfig, updateConfig } from '../utils/state.js';
 import { logger } from '../utils/logger.js';
 import { checkAuth as checkGhAuth, getCurrentUser as getGhUser } from '../cli/gh.js';
 import { checkAuth as checkLinearisAuth } from '../cli/linearis.js';
@@ -178,6 +178,12 @@ function displayPreferences(config) {
     console.log(chalk.bold('GitHub Default Org:'), chalk.dim('Personal account'));
   }
 
+  if (config.linearTeamKey) {
+    console.log(chalk.bold('Linear Team Key:'), config.linearTeamKey);
+  } else {
+    console.log(chalk.bold('Linear Team Key:'), chalk.dim('Not set'));
+  }
+
   if (config.supabaseDefaultOrg) {
     console.log(chalk.bold('Supabase Default Org:'), config.supabaseDefaultOrg);
   } else {
@@ -246,6 +252,11 @@ export async function configCommand(options = {}) {
   // Add Linear API key setup if linearis is installed but not authenticated
   if (installed.linearis && !authStatus.linearis.authenticated) {
     menuChoices.push({ name: '🔑 Set Linear API key', value: 'linear-api-key' });
+  }
+
+  // Add Linear team key setup (always available if linearis is installed and authenticated)
+  if (installed.linearis && authStatus.linearis.authenticated) {
+    menuChoices.push({ name: '🏢 Set Linear team key', value: 'linear-team-key' });
   }
 
   menuChoices.push(
@@ -378,6 +389,44 @@ export async function configCommand(options = {}) {
       }
     } catch (error) {
       logger.error(`Failed to save API key: ${error.message}`);
+    }
+
+    console.log();
+    return;
+  }
+
+  if (action === 'linear-team-key') {
+    console.log(chalk.bold('\n🏢 Linear Team Key Setup\n'));
+    console.log('Your team key is the short code in your Linear URL:');
+    console.log(chalk.cyan('linear.app/[workspace]/team/[TEAM-KEY]'));
+    console.log();
+    console.log('Common examples: ENG, PROD, DESIGN, OPS');
+    console.log();
+
+    const { teamKey } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'teamKey',
+        message: 'Enter your Linear team key:',
+        validate: (input) => {
+          if (!input || input.trim().length === 0) {
+            return 'Team key is required';
+          }
+          if (!/^[A-Z0-9-]+$/i.test(input)) {
+            return 'Team key should only contain letters, numbers, and hyphens';
+          }
+          return true;
+        },
+      },
+    ]);
+
+    try {
+      await updateConfig({ linearTeamKey: teamKey.trim() });
+      logger.success(`Linear team key set to: ${teamKey}`);
+      console.log();
+      console.log(chalk.green('✓ This team key will be used by default in dovetail commands'));
+    } catch (error) {
+      logger.error(`Failed to save team key: ${error.message}`);
     }
 
     console.log();

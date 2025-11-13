@@ -11,11 +11,26 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 # Only for file operations
 [[ ! "$TOOL_NAME" =~ (Write|Edit|NotebookEdit) ]] && exit 0
 
-# Exit if not a Dovetail project
-PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$PROJECT_ROOT" 2>/dev/null || exit 0
+# Find Dovetail project root by searching upward for .dovetail/state.json
+find_dovetail_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -f "$dir/.dovetail/state.json" ]]; then
+      echo "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
 
-[ ! -f ".dovetail/state.json" ] && exit 0
+# Find and change to project root
+PROJECT_ROOT=$(find_dovetail_root)
+if [[ -z "$PROJECT_ROOT" ]]; then
+  exit 0
+fi
+
+cd "$PROJECT_ROOT" 2>/dev/null || exit 0
 
 # Check if dovetail CLI is available
 if ! command -v dovetail &> /dev/null; then
@@ -25,10 +40,19 @@ fi
 # Check if there are changes
 if git diff --quiet && git diff --cached --quiet; then
   # No changes - skip
+  echo "📝 POST-TOOL-USE: No changes to commit" >&2
   exit 0
 fi
 
 # Call auto-commit command
+echo "📝 POST-TOOL-USE: Changes detected, auto-committing..." >&2
 dovetail auto-commit
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo "✓ POST-TOOL-USE: Auto-commit succeeded" >&2
+else
+  echo "✗ POST-TOOL-USE: Auto-commit failed (exit $EXIT_CODE)" >&2
+fi
 
 exit 0

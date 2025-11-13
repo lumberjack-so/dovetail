@@ -118,7 +118,7 @@ export async function start(options = {}) {
       url: issue.url
     };
 
-    saveProjectState(state);
+    await saveProjectState(process.cwd(), state);
 
     if (!quiet) {
       console.error(chalk.green('   ✓ Ready to code!'));

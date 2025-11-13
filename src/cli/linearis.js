@@ -234,10 +234,21 @@ export async function checkAuth() {
 
 /**
  * List teams
- * Note: linearis doesn't have a dedicated teams command
+ * Note: linearis CLI does not support listing teams. Team keys/names must be
+ * provided by the user or obtained through the Linear web UI or GraphQL API.
+ *
+ * Team keys are typically short codes like "ENG", "PROD", "DESIGN", etc.
+ * You can find your team key in Linear's URL: linear.app/[workspace]/team/[TEAM-KEY]
  */
 export async function listTeams() {
-  throw new Error('linearis does not support listing teams. Use the Linear API or web UI.');
+  throw new Error(
+    'linearis does not support listing teams.\n\n' +
+    'To find your team key:\n' +
+    '1. Go to https://linear.app\n' +
+    '2. Open your team page\n' +
+    '3. Check the URL: linear.app/[workspace]/team/[TEAM-KEY]\n\n' +
+    'The team key is typically a short code like "ENG", "PROD", or "DESIGN".'
+  );
 }
 
 /**

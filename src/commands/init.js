@@ -6,14 +6,15 @@ import slugify from 'slugify';
 
 // Native CLI wrappers
 import { getCurrentUser, createRepo, setSecret } from '../cli/gh.js';
-import { listTeams, listProjects as listLinearProjects, createIssue } from '../cli/linearis.js';
+import { createIssue } from '../cli/linearis.js';
+import { getTeamByKey, createProject as createLinearProject } from '../cli/linear-api.js';
 import { listOrgs as listSupabaseOrgs, createProject as createSupabaseProject, getProjectKeys } from '../cli/supabase.js';
 import { createApp } from '../cli/flyctl.js';
 
 // Utilities
 import { init as gitInit, addRemote, commit, push } from '../utils/git.js';
 import { scaffoldProject } from '../templates/scaffold.js';
-import { saveProjectState } from '../utils/state.js';
+import { saveProjectState, readConfig } from '../utils/state.js';
 
 /**
  * Create slug from project name
@@ -39,6 +40,9 @@ export async function initCommand(projectName, options = {}) {
     console.log(chalk.green(`✓ Authenticated as ${githubUser}`));
     console.log();
 
+    // Load saved config for defaults
+    const savedConfig = await readConfig();
+
     // Prompt for configuration
     const answers = await inquirer.prompt([
       {
@@ -58,6 +62,21 @@ export async function initCommand(projectName, options = {}) {
         default: options.public || false
       },
       {
+        type: 'input',
+        name: 'linearTeamKey',
+        message: 'Linear team key (e.g., ENG, PROD):',
+        default: savedConfig.linearTeamKey || undefined,
+        validate: (input) => {
+          if (!input || input.trim().length === 0) {
+            return 'Team key is required. Find it in your Linear URL: linear.app/[workspace]/team/[TEAM-KEY]';
+          }
+          if (!/^[A-Z0-9-]+$/i.test(input)) {
+            return 'Team key should only contain letters, numbers, and hyphens';
+          }
+          return true;
+        }
+      },
+      {
         type: 'list',
         name: 'region',
         message: 'Fly.io region:',
@@ -74,17 +93,19 @@ export async function initCommand(projectName, options = {}) {
       projectName,
       slug: answers.slug,
       isPublic: answers.isPublic,
+      linearTeamKey: answers.linearTeamKey,
       region: answers.region,
       githubOwner: githubUser
     };
 
     // Confirmation
     console.log(chalk.bold('\nProject Configuration:'));
-    console.log(chalk.blue('Name:       '), config.projectName);
-    console.log(chalk.blue('Slug:       '), config.slug);
-    console.log(chalk.blue('Owner:      '), config.githubOwner);
-    console.log(chalk.blue('Visibility: '), config.isPublic ? 'public' : 'private');
-    console.log(chalk.blue('Region:     '), config.region);
+    console.log(chalk.blue('Name:        '), config.projectName);
+    console.log(chalk.blue('Slug:        '), config.slug);
+    console.log(chalk.blue('Owner:       '), config.githubOwner);
+    console.log(chalk.blue('Visibility:  '), config.isPublic ? 'public' : 'private');
+    console.log(chalk.blue('Linear Team: '), config.linearTeamKey);
+    console.log(chalk.blue('Region:      '), config.region);
     console.log();
 
     const { confirm } = await inquirer.prompt([{
@@ -132,16 +153,20 @@ export async function initCommand(projectName, options = {}) {
       {
         title: 'Creating Linear project',
         task: async (ctx) => {
-          // Get Linear teams
-          const teams = await listTeams();
-          if (teams.length === 0) {
-            throw new Error('No Linear teams found. Please create a team at https://linear.app');
-          }
+          // Get team ID from team key
+          const team = await getTeamByKey(config.linearTeamKey);
 
-          // Use first team (or could prompt user to select)
-          const team = teams[0];
+          // Create project using Linear GraphQL API
+          const project = await createLinearProject(
+            config.projectName,
+            [team.id],
+            {
+              description: `${config.projectName} development project`,
+              color: '#3b82f6', // Blue
+            }
+          );
 
-          // Create 3 starter issues
+          // Create 3 starter issues in the project
           const starterIssues = [
             { title: 'Setup development environment', priority: 2 },
             { title: 'Build initial features', priority: 3 },
@@ -150,19 +175,23 @@ export async function initCommand(projectName, options = {}) {
 
           const createdIssues = [];
           for (const issueData of starterIssues) {
-            const issue = await createIssue(team.id, {
+            const issue = await createIssue(config.linearTeamKey, {
               title: issueData.title,
               description: `Part of ${config.projectName} project setup`,
-              priority: issueData.priority
+              priority: issueData.priority,
+              projectId: project.id // Add issues to the project
             });
             createdIssues.push(issue);
           }
 
           ctx.linearTeam = team;
+          ctx.linearProject = project;
           ctx.linearIssues = createdIssues;
           projectData.linear = {
             teamId: team.id,
-            projectId: null // Linear projects are implicit in teams
+            teamKey: config.linearTeamKey,
+            projectId: project.id,
+            projectUrl: project.url
           };
         }
       },
@@ -191,14 +220,14 @@ export async function initCommand(projectName, options = {}) {
           // Wait a bit for project to initialize
           await new Promise(resolve => setTimeout(resolve, 5000));
 
-          // Get API keys
-          const keys = await getProjectKeys(project.ref);
+          // Get API keys (use project.id as the ref)
+          const keys = await getProjectKeys(project.id);
 
           ctx.supabaseProject = project;
           ctx.supabaseKeys = keys;
           projectData.supabase = {
-            projectRef: project.ref,
-            url: `https://${project.ref}.supabase.co`
+            projectRef: project.id,
+            url: `https://${project.id}.supabase.co`
           };
         }
       },
@@ -208,13 +237,15 @@ export async function initCommand(projectName, options = {}) {
           const stagingApp = `${config.slug}-staging`;
           const productionApp = `${config.slug}-production`;
 
-          await createApp(stagingApp, { region: config.region });
-          await createApp(productionApp, { region: config.region });
+          // Note: Region will be set during first deploy, not during app creation
+          await createApp(stagingApp);
+          await createApp(productionApp);
 
           ctx.flyApps = { staging: stagingApp, production: productionApp };
           projectData.flyio = {
             staging: stagingApp,
-            production: productionApp
+            production: productionApp,
+            region: config.region // Save for later use during deploy
           };
         }
       },
@@ -263,17 +294,29 @@ export async function initCommand(projectName, options = {}) {
       {
         title: 'Saving project state',
         task: async () => {
-          saveProjectState(projectData);
+          // We're already in the project directory after git init task
+          await saveProjectState(process.cwd(), projectData);
         }
       },
       {
         title: 'Installing Dovetail hooks',
         task: async () => {
           const dovetailPath = new URL('../../', import.meta.url).pathname;
+
+          // Create .claude directory if it doesn't exist
+          await execa('mkdir', ['-p', '.claude/hooks']);
+
+          // Copy all hook files
           await execa('cp', [
             '-r',
-            `${dovetailPath}/.claude-hooks`,
-            '.claude/hooks'
+            `${dovetailPath}/.claude-hooks/.`,
+            '.claude/hooks/'
+          ]);
+
+          // Copy config.json to .claude/ (Claude Code reads it from here)
+          await execa('cp', [
+            `${dovetailPath}/.claude-hooks/claude-config.json`,
+            '.claude/config.json'
           ]);
         }
       }
@@ -286,7 +329,8 @@ export async function initCommand(projectName, options = {}) {
 
     console.log(chalk.bold('Resources created:\n'));
     console.log(chalk.blue('  GitHub:   '), projectData.github.url);
-    console.log(chalk.blue('  Linear:   '), chalk.dim(`Team: ${projectData.linear.teamId}`));
+    console.log(chalk.blue('  Linear:   '), projectData.linear.projectUrl);
+    console.log(chalk.blue('            '), chalk.dim(`Team: ${projectData.linear.teamKey}`));
     console.log(chalk.blue('  Supabase: '), projectData.supabase.url);
     console.log(chalk.blue('  Fly.io:   '), chalk.dim(`Staging: ${projectData.flyio.staging}`));
     console.log(chalk.blue('            '), chalk.dim(`Production: ${projectData.flyio.production}`));

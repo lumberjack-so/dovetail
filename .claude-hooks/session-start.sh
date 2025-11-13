@@ -3,10 +3,26 @@
 # Dovetail Session Start Hook
 # Displays project context when Claude Code opens
 
-# Exit if not a dovetail project
-if [ ! -f ".dovetail/state.json" ]; then
+# Find Dovetail project root by searching upward for .dovetail/state.json
+find_dovetail_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -f "$dir/.dovetail/state.json" ]]; then
+      echo "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
+
+# Find and change to project root
+PROJECT_ROOT=$(find_dovetail_root)
+if [[ -z "$PROJECT_ROOT" ]]; then
   exit 0
 fi
+
+cd "$PROJECT_ROOT" 2>/dev/null || exit 0
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🔧 DOVETAIL PROJECT"
@@ -18,10 +34,10 @@ if command -v dovetail &> /dev/null; then
   STATUS=$(dovetail status --json 2>/dev/null)
 
   if [ $? -eq 0 ]; then
-    PROJECT_NAME=$(echo "$STATUS" | jq -r '.project.name // "Unknown"')
+    PROJECT_NAME=$(echo "$STATUS" | jq -r '.name // "Unknown"')
     ACTIVE_ISSUE=$(echo "$STATUS" | jq -r '.activeIssue')
-    CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.git.currentBranch // "unknown"')
-    HAS_CHANGES=$(echo "$STATUS" | jq -r '.git.hasChanges // false')
+    CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.branch // "unknown"')
+    HAS_CHANGES=$(echo "$STATUS" | jq -r '.hasChanges // false')
     PR_URL=$(echo "$STATUS" | jq -r '.pr.url // empty')
     CI_STATUS=$(echo "$STATUS" | jq -r '.ciStatus // "unknown"')
 

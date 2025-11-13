@@ -65,6 +65,7 @@ export async function checkAuth() {
 
 /**
  * Create a new app
+ * Note: Region is NOT set during app creation - it's set during first deploy
  */
 export async function createApp(name, options = {}) {
   const args = ['apps', 'create', name, '--json'];
@@ -73,9 +74,8 @@ export async function createApp(name, options = {}) {
     args.push('--org', options.org);
   }
 
-  if (options.region) {
-    args.push('--region', options.region);
-  }
+  // Region is not supported in apps create - it's set during deploy
+  // Remove region from options if passed
 
   const { stdout } = await execFlyctl(args);
   return JSON.parse(stdout);

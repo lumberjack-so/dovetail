@@ -1,13 +1,16 @@
 import simpleGit from 'simple-git';
 import { execa } from 'execa';
 
-const git = simpleGit();
+// Helper to get git instance for current working directory
+function getGit() {
+  return simpleGit(process.cwd());
+}
 
 /**
  * Get current branch name
  */
 export async function getCurrentBranch() {
-  const status = await git.status();
+  const status = await getGit().status();
   return status.current;
 }
 
@@ -15,7 +18,7 @@ export async function getCurrentBranch() {
  * Get remote URL
  */
 export async function getRemoteUrl(remoteName = 'origin') {
-  const remotes = await git.getRemotes(true);
+  const remotes = await getGit().getRemotes(true);
   const remote = remotes.find(r => r.name === remoteName);
   return remote?.refs?.fetch || remote?.refs?.push || '';
 }
@@ -24,7 +27,7 @@ export async function getRemoteUrl(remoteName = 'origin') {
  * Check if repository is clean (no uncommitted changes)
  */
 export async function isRepoClean() {
-  const status = await git.status();
+  const status = await getGit().status();
   return status.isClean();
 }
 
@@ -32,7 +35,7 @@ export async function isRepoClean() {
  * Get list of changed files
  */
 export async function getChangedFiles() {
-  const status = await git.status();
+  const status = await getGit().status();
   return {
     modified: status.modified,
     created: status.created,
@@ -46,7 +49,7 @@ export async function getChangedFiles() {
  * Create and checkout a new branch
  */
 export async function createBranch(branchName) {
-  await git.checkoutLocalBranch(branchName);
+  await getGit().checkoutLocalBranch(branchName);
   return branchName;
 }
 
@@ -54,8 +57,8 @@ export async function createBranch(branchName) {
  * Commit changes with message
  */
 export async function commit(message) {
-  await git.add('.');
-  await git.commit(message);
+  await getGit().add('.');
+  await getGit().commit(message);
 }
 
 /**
@@ -63,9 +66,9 @@ export async function commit(message) {
  */
 export async function push(branch, setUpstream = false) {
   if (setUpstream) {
-    await git.push(['-u', 'origin', branch]);
+    await getGit().push(['-u', 'origin', branch]);
   } else {
-    await git.push();
+    await getGit().push();
   }
 }
 
@@ -74,9 +77,9 @@ export async function push(branch, setUpstream = false) {
  */
 export async function pull(branch = null) {
   if (branch) {
-    await git.pull('origin', branch);
+    await getGit().pull('origin', branch);
   } else {
-    await git.pull();
+    await getGit().pull();
   }
 }
 
@@ -84,14 +87,14 @@ export async function pull(branch = null) {
  * Fetch from remote
  */
 export async function fetch() {
-  await git.fetch();
+  await getGit().fetch();
 }
 
 /**
  * Switch to branch
  */
 export async function checkout(branch) {
-  await git.checkout(branch);
+  await getGit().checkout(branch);
 }
 
 /**
@@ -102,21 +105,21 @@ export async function merge(branch, options = {}) {
   if (options.squash) {
     args.unshift('--squash');
   }
-  await git.merge(args);
+  await getGit().merge(args);
 }
 
 /**
  * Delete branch
  */
 export async function deleteBranch(branch, force = false) {
-  await git.deleteLocalBranch(branch, force);
+  await getGit().deleteLocalBranch(branch, force);
 }
 
 /**
  * Get commits ahead of origin
  */
 export async function getCommitsAhead() {
-  const status = await git.status();
+  const status = await getGit().status();
   return status.ahead;
 }
 
@@ -124,7 +127,7 @@ export async function getCommitsAhead() {
  * Get commits behind origin
  */
 export async function getCommitsBehind() {
-  const status = await git.status();
+  const status = await getGit().status();
   return status.behind;
 }
 
@@ -132,7 +135,7 @@ export async function getCommitsBehind() {
  * Get log of commits
  */
 export async function getLog(options = {}) {
-  const log = await git.log(options);
+  const log = await getGit().log(options);
   return log.all;
 }
 
@@ -140,7 +143,7 @@ export async function getLog(options = {}) {
  * Get commits since last tag or specific ref
  */
 export async function getCommitsSince(ref) {
-  const log = await git.log({ from: ref, to: 'HEAD' });
+  const log = await getGit().log({ from: ref, to: 'HEAD' });
   return log.all;
 }
 
@@ -159,7 +162,7 @@ export async function getMergedBranches(baseBranch = 'main') {
  * Check if branch exists
  */
 export async function branchExists(branchName) {
-  const branches = await git.branchLocal();
+  const branches = await getGit().branchLocal();
   return branches.all.includes(branchName);
 }
 
@@ -180,7 +183,7 @@ export async function getDefaultBranch() {
  * Initialize git repository
  */
 export async function init() {
-  await git.init();
+  await getGit().init();
 }
 
 /**
@@ -188,7 +191,7 @@ export async function init() {
  */
 export async function remoteExists(name) {
   try {
-    const remotes = await git.getRemotes();
+    const remotes = await getGit().getRemotes();
     return remotes.some(remote => remote.name === name);
   } catch {
     return false;
@@ -202,9 +205,9 @@ export async function addRemote(name, url) {
   const exists = await remoteExists(name);
   if (exists) {
     // Update the remote URL instead of adding
-    await git.remote(['set-url', name, url]);
+    await getGit().remote(['set-url', name, url]);
   } else {
-    await git.addRemote(name, url);
+    await getGit().addRemote(name, url);
   }
 }
 
@@ -212,7 +215,7 @@ export async function addRemote(name, url) {
  * Get current commit hash
  */
 export async function getCurrentCommit() {
-  const log = await git.log({ maxCount: 1 });
+  const log = await getGit().log({ maxCount: 1 });
   return log.latest.hash;
 }
 
@@ -220,9 +223,9 @@ export async function getCurrentCommit() {
  * Create tag
  */
 export async function createTag(tagName, message) {
-  await git.addTag(tagName);
+  await getGit().addTag(tagName);
   if (message) {
-    await git.tag(['-a', tagName, '-m', message, '-f']);
+    await getGit().tag(['-a', tagName, '-m', message, '-f']);
   }
 }
 
@@ -230,7 +233,7 @@ export async function createTag(tagName, message) {
  * Push tags
  */
 export async function pushTags() {
-  await git.pushTags();
+  await getGit().pushTags();
 }
 
 /**
@@ -238,16 +241,16 @@ export async function pushTags() {
  */
 export async function getDiff(file = null) {
   if (file) {
-    return await git.diff([file]);
+    return await getGit().diff([file]);
   }
-  return await git.diff();
+  return await getGit().diff();
 }
 
 /**
  * Rebase current branch on another
  */
 export async function rebase(branch) {
-  await git.rebase([branch]);
+  await getGit().rebase([branch]);
 }
 
 /**
@@ -255,7 +258,7 @@ export async function rebase(branch) {
  */
 export async function isGitRepository() {
   try {
-    await git.revparse(['--is-inside-work-tree']);
+    await getGit().revparse(['--is-inside-work-tree']);
     return true;
   } catch {
     return false;

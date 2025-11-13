@@ -1,8 +1,10 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { loadProjectState, saveProjectState } from '../utils/state.js';
-import { listIssues, createIssue } from '../cli/linearis.js';
+import { createIssue, showIssue } from '../cli/linearis.js';
+import { listIssues } from '../cli/linear-api.js';
 import { start } from './start.js';
+import { isRepoClean, commit, getChangedFiles } from '../utils/git.js';
 
 /**
  * Check for active issue, auto-select/create if needed
@@ -40,13 +42,41 @@ export async function checkIssue(options = {}) {
       console.error(chalk.dim(`   Searching Linear (team: ${state.linear.teamId})...`));
     }
 
-    const issues = await listIssues(state.linear.teamId, state.linear.projectId, {
+    const issues = await listIssues(state.linear.projectId, {
       stateType: ['unstarted', 'started'],
       limit: 10
     });
 
     // Auto mode - pick first issue or create one
     if (options.auto) {
+      // Check if there are uncommitted changes
+      const repoIsClean = await isRepoClean();
+      const hasChanges = !repoIsClean;
+
+      // If there are uncommitted changes, commit them first before proceeding
+      if (hasChanges) {
+        if (!options.quiet) {
+          console.error(chalk.yellow('   Found uncommitted changes - committing them first...'));
+        }
+
+        const changedFiles = await getChangedFiles();
+        const allFiles = [
+          ...changedFiles.modified,
+          ...changedFiles.created,
+          ...changedFiles.deleted
+        ];
+
+        // Create a generic WIP commit
+        const fileNames = allFiles.map(f => f.split('/').pop()).slice(0, 3).join(', ');
+        const commitMessage = `chore: WIP - ${fileNames}${allFiles.length > 3 ? ' and more' : ''}`;
+
+        await commit(commitMessage);
+
+        if (!options.quiet) {
+          console.error(chalk.green(`   ✓ Committed ${allFiles.length} file(s)`));
+        }
+      }
+
       if (issues.length === 0) {
         // No issues - create a placeholder
         if (!options.quiet) {
@@ -65,6 +95,7 @@ export async function checkIssue(options = {}) {
           console.error(chalk.green(`   ✓ Created issue: ${newIssue.identifier}`));
         }
 
+        // Now repo is clean (we committed changes above), so we can call start()
         await start({ issueKey: newIssue.identifier, quiet: options.quiet });
 
         if (options.json) {
@@ -83,6 +114,7 @@ export async function checkIssue(options = {}) {
           console.error(chalk.dim(`   Auto-selected: ${selectedIssue.identifier} - ${selectedIssue.title}`));
         }
 
+        // Now repo is clean (we committed changes above), so we can call start()
         await start({ issueKey: selectedIssue.identifier, quiet: options.quiet });
 
         if (options.json) {

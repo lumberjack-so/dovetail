@@ -20,6 +20,7 @@ import { readyCommand } from '../src/commands/ready.js';
 import { syncCommand } from '../src/commands/sync.js';
 // import { cleanCommand } from '../src/commands/clean.js'; // TODO 2.0: Migrate to CLI wrappers
 import { configCommand } from '../src/commands/config.js';
+import { doctorCommand } from '../src/commands/doctor.js';
 import { migrateCommand } from '../src/commands/migrate.js';
 // import { rollbackCommand } from '../src/commands/rollback.js'; // TODO 2.0: Migrate to CLI wrappers
 // import { purgeCommand } from '../src/commands/purge.js'; // TODO 2.0: Migrate to CLI wrappers
@@ -51,6 +52,11 @@ program
   .command('onboard')
   .description('Interactive onboarding wizard for first-time setup')
   .action(onboardCommand);
+
+program
+  .command('doctor')
+  .description('Run environment diagnostics and compatibility checks')
+  .action(doctorCommand);
 
 // Project lifecycle
 program
