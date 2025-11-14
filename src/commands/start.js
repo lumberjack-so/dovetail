@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import slugify from 'slugify';
 import { loadProjectState, saveProjectState } from '../utils/state.js';
-import { showIssue, updateIssue, listWorkflowStates } from '../cli/linearis.js';
 import { createBranch, checkout, pull, getDefaultBranch, getCurrentBranch } from '../utils/git.js';
+import { getIssue, updateIssueStatus } from '../utils/linear.js';
 
 /**
  * Create branch name from issue key and title
@@ -56,7 +56,7 @@ export async function start(issueKeyArg, options = {}) {
       console.error(chalk.dim(`   Loading issue details from Linear...`));
     }
 
-    const issue = await showIssue(issueKey);
+    const issue = await getIssue(issueKey);
 
     // Create branch name
     const branchName = createBranchName(issue.identifier, issue.title);
@@ -86,23 +86,12 @@ export async function start(issueKeyArg, options = {}) {
 
     // Update Linear issue to "In Progress"
     try {
-      // Get workflow states to find "In Progress" state
-      const states = await listWorkflowStates(state.linear.teamId);
-      const inProgressState = states.find(s =>
-        s.name.toLowerCase().includes('progress') ||
-        s.type === 'started'
-      );
-
-      if (inProgressState) {
-        if (!quiet) {
-          console.error(chalk.dim('   Moving issue to "In Progress" in Linear...'));
-        }
-        await updateIssue(issue.identifier, {
-          state: inProgressState.name
-        });
-        if (!quiet) {
-          console.error(chalk.green(`   ✓ Issue moved to "In Progress"`));
-        }
+      if (!quiet) {
+        console.error(chalk.dim('   Moving issue to "In Progress" in Linear...'));
+      }
+      await updateIssueStatus(issue.id, 'In Progress');
+      if (!quiet) {
+        console.error(chalk.green(`   ✓ Issue moved to "In Progress"`));
       }
     } catch (error) {
       // Non-critical - continue even if state update fails
