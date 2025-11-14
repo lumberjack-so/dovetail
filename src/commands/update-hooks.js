@@ -43,8 +43,9 @@ export async function updateHooksCommand() {
         }
       }
 
-      // Create hooks directory
+      // Create hooks and agents directories
       await execa('mkdir', ['-p', '.claude/hooks']);
+      await execa('mkdir', ['-p', '.claude/agents']);
 
       // Copy hooks from Dovetail installation
       await execa('cp', [
@@ -53,7 +54,16 @@ export async function updateHooksCommand() {
         '.claude/hooks/'
       ]);
 
-      spinner.succeed('Claude Code hooks updated successfully!');
+      // Copy agents from Dovetail installation
+      if (existsSync(`${dovetailPath}/.claude-hooks/agents`)) {
+        await execa('cp', [
+          '-r',
+          `${dovetailPath}/.claude-hooks/agents/.`,
+          '.claude/agents/'
+        ]);
+      }
+
+      spinner.succeed('Claude Code hooks and agents updated successfully!');
 
       console.log(chalk.bold.green('\n✨ Hooks updated!\n'));
       console.log(chalk.dim('Your project now has the latest Dovetail hooks:\n'));

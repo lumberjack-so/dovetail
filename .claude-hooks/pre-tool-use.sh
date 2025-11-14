@@ -90,11 +90,11 @@ AGENT_PROMPT="A developer is about to use the $TOOL_NAME tool. Please perform Do
 Be extremely verbose - print every step with clear formatting."
 
 # Load the agent prompt from the markdown file
-if [ -f "$PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md" ]; then
-  AGENT_SYSTEM_PROMPT=$(tail -n +7 "$PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md")
+if [ -f "$PROJECT_ROOT/.claude/agents/dovetail-sync.md" ]; then
+  AGENT_SYSTEM_PROMPT=$(tail -n +7 "$PROJECT_ROOT/.claude/agents/dovetail-sync.md")
 else
   echo "⚠️  Dovetail-sync agent definition not found"
-  echo "   Expected: $PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md"
+  echo "   Expected: $PROJECT_ROOT/.claude/agents/dovetail-sync.md"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   exit 2
 fi
