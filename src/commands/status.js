@@ -25,6 +25,8 @@ export async function status(options = {}) {
     if (options.json) {
       console.log(JSON.stringify({
         isDovetailProject: true,
+        name: state.name || null,
+        slug: state.slug || null,
         activeIssue: state.activeIssue || null,
         branch: currentBranch,
         github: state.github || null,
