@@ -69,7 +69,11 @@ export async function updateHooksCommand() {
       console.log(chalk.dim('Your project now has the latest Dovetail hooks:\n'));
       console.log(chalk.cyan('  • user-prompt-submit.sh  ') + chalk.dim('- Ensures active issue'));
       console.log(chalk.cyan('  • pre-tool-use.sh        ') + chalk.dim('- Validates before writes'));
-      console.log(chalk.cyan('  • post-tool-use.sh       ') + chalk.dim('- Auto-commits changes'));
+      console.log(chalk.cyan('  • post-tool-use.sh       ') + chalk.dim('- Finalizes work (commit, PR, Linear)'));
+      console.log();
+      console.log(chalk.dim('Agents installed:\n'));
+      console.log(chalk.cyan('  • dovetail-sync          ') + chalk.dim('- Pre-work validation'));
+      console.log(chalk.cyan('  • dovetail-finalize      ') + chalk.dim('- Post-work automation'));
       console.log();
 
       if (hasExistingHooks) {
