@@ -20,9 +20,11 @@ function createBranchName(issueKey, issueTitle) {
 /**
  * Start work on a Linear issue
  */
-export async function start(options = {}) {
+export async function start(issueKeyArg, options = {}) {
   try {
-    const { issueKey, quiet } = options;
+    // Support both positional arg and options
+    const issueKey = issueKeyArg || options.issueKey;
+    const { quiet } = options;
 
     if (!issueKey) {
       console.error(chalk.red('Error: Issue key is required'));
