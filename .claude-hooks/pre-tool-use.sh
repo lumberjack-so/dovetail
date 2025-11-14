@@ -99,13 +99,14 @@ else
   exit 2
 fi
 
-# Run the subagent using claude CLI with streaming JSON output
-# This allows us to parse and display progress in real-time
-AGENT_EXIT=0
+# Run the subagent using claude CLI in verbose mode
+# Use text output format for immediate visibility
+set -o pipefail
+
 claude --print \
   --max-turns 50 \
+  --verbose \
   --add-dir "$PROJECT_ROOT" \
-  --output-format stream-json \
   --agents "{
     \"dovetail-sync\": {
       \"description\": \"Dovetail workflow sync agent\",
@@ -114,36 +115,11 @@ claude --print \
       \"model\": \"sonnet\"
     }
   }" \
-  "$AGENT_PROMPT" 2>&1 | while IFS= read -r line; do
-    # Parse each JSON line and extract text content
-    MESSAGE_TYPE=$(echo "$line" | jq -r '.type // empty' 2>/dev/null)
+  "$AGENT_PROMPT" 2>&1
 
-    if [ "$MESSAGE_TYPE" = "content_block_delta" ]; then
-      # Extract and print text deltas (streaming response)
-      TEXT_DELTA=$(echo "$line" | jq -r '.delta.text // empty' 2>/dev/null)
-      if [ -n "$TEXT_DELTA" ]; then
-        echo -n "$TEXT_DELTA"
-      fi
-    elif [ "$MESSAGE_TYPE" = "tool_use" ]; then
-      # Show tool usage
-      TOOL_NAME=$(echo "$line" | jq -r '.name // empty' 2>/dev/null)
-      if [ -n "$TOOL_NAME" ]; then
-        echo ""
-        echo "  🔧 Using tool: $TOOL_NAME"
-      fi
-    elif [ "$MESSAGE_TYPE" = "tool_result" ]; then
-      # Tool completed
-      echo "  ✓ Tool completed"
-    elif [ "$MESSAGE_TYPE" = "error" ]; then
-      # Error occurred
-      ERROR_MSG=$(echo "$line" | jq -r '.error.message // empty' 2>/dev/null)
-      echo ""
-      echo "  ⚠️  Error: $ERROR_MSG"
-      AGENT_EXIT=1
-    fi
-  done
+AGENT_EXIT=$?
 
-# Add newline after streaming output
+# Add newline after agent output
 echo ""
 echo ""
 
