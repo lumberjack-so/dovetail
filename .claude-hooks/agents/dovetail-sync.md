@@ -91,23 +91,29 @@ Search Linear for issues matching the task keywords. Use MCP tools if available:
    ✓ Found matching issue: [KEY] - [title]
    🔄 Switching to this issue...
    ```
-   **CRITICAL**: You MUST run `dovetail start [ISSUE-KEY]` to properly switch issues.
-   This command will:
-   - Create the correct feature branch
-   - Update the state file with the new active issue
-   - Move the Linear issue to "In Progress"
+   **CRITICAL**: Always run `dovetail start [ISSUE-KEY]` to properly switch.
 
-   DO NOT use MCP tools or git commands directly. ALWAYS use `dovetail start [ISSUE-KEY]`.
+   This single command handles everything:
+   - Uses Linear MCP (or CLI) to update issue status
+   - Creates/checkouts the correct feature branch via git
+   - Updates `.dovetail/state.json` with new active issue
+
+   Run: `dovetail start [ISSUE-KEY]`
 
 2. If no matching issue → Create new issue automatically
    ```
    ✗ No matching issue found
    ✨ Creating new issue: "[task description]"
    ```
-   First create the issue using MCP `mcp__linear__create_issue` if available.
-   Then **IMMEDIATELY** run `dovetail start [NEW-ISSUE-KEY]` to start work on it.
 
-   DO NOT manually create branches or update state. Let `dovetail start` handle it.
+   **Step 1**: Create the issue
+   - If Linear MCP available: Use `mcp__linear__create_issue`
+   - Otherwise: Use `dovetail check-issue` (which will prompt/create)
+
+   **Step 2**: Start work on the new issue
+   - Run `dovetail start [NEW-ISSUE-KEY]` to set up branch and state
+
+   The `dovetail start` command internally uses Linear MCP if available.
 
 **NEVER** ask the user to choose. Make the intelligent decision for them.
 
