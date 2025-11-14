@@ -10,6 +10,7 @@ import { readFileSync } from 'fs';
 import { onboardCommand } from '../src/commands/onboard.js';
 import { initCommand } from '../src/commands/init.js';
 import { adoptCommand } from '../src/commands/adopt.js';
+import { updateHooksCommand } from '../src/commands/update-hooks.js';
 import { startCommand } from '../src/commands/start.js';
 import { statusCommand } from '../src/commands/status.js';
 // import { commitCommand } from '../src/commands/commit.js'; // TODO 2.0: Migrate to CLI wrappers
@@ -71,6 +72,11 @@ program
   .command('adopt')
   .description('Adopt an existing project into Dovetail')
   .action(adoptCommand);
+
+program
+  .command('update-hooks')
+  .description('Update Claude Code hooks to latest version')
+  .action(updateHooksCommand);
 
 program
   .command('status')
