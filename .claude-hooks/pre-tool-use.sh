@@ -75,6 +75,8 @@ fi
 # Invoke dovetail-sync subagent
 echo "🤖 Invoking dovetail-sync subagent..."
 echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
 # Create a prompt that includes context from the current conversation
 AGENT_PROMPT="A developer is about to use the $TOOL_NAME tool. Please perform Dovetail workflow synchronization:
@@ -87,28 +89,62 @@ AGENT_PROMPT="A developer is about to use the $TOOL_NAME tool. Please perform Do
 
 Be extremely verbose - print every step with clear formatting."
 
-# Run the subagent using claude CLI in print mode
-# The --add-dir flag ensures the agent has access to the project directory
-AGENT_OUTPUT=$(claude --print \
-  --max-turns 5 \
+# Load the agent prompt from the markdown file
+if [ -f "$PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md" ]; then
+  AGENT_SYSTEM_PROMPT=$(tail -n +7 "$PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md")
+else
+  echo "⚠️  Dovetail-sync agent definition not found"
+  echo "   Expected: $PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 2
+fi
+
+# Run the subagent using claude CLI with streaming JSON output
+# This allows us to parse and display progress in real-time
+AGENT_EXIT=0
+claude --print \
+  --max-turns 50 \
   --add-dir "$PROJECT_ROOT" \
-  --agents "$(cat <<'EOF'
-{
-  "dovetail-sync": {
-    "description": "Dovetail workflow sync agent",
-    "prompt": "$(cat $PROJECT_ROOT/.claude/hooks/agents/dovetail-sync.md | tail -n +7)",
-    "tools": ["Read", "Bash", "Grep", "Glob"],
-    "model": "sonnet"
-  }
-}
-EOF
-)" \
-  "$AGENT_PROMPT" 2>&1)
+  --output-format stream-json \
+  --agents "{
+    \"dovetail-sync\": {
+      \"description\": \"Dovetail workflow sync agent\",
+      \"prompt\": $(echo "$AGENT_SYSTEM_PROMPT" | jq -Rs .),
+      \"tools\": [\"Read\", \"Bash\", \"Grep\", \"Glob\"],
+      \"model\": \"sonnet\"
+    }
+  }" \
+  "$AGENT_PROMPT" 2>&1 | while IFS= read -r line; do
+    # Parse each JSON line and extract text content
+    MESSAGE_TYPE=$(echo "$line" | jq -r '.type // empty' 2>/dev/null)
 
-AGENT_EXIT=$?
+    if [ "$MESSAGE_TYPE" = "content_block_delta" ]; then
+      # Extract and print text deltas (streaming response)
+      TEXT_DELTA=$(echo "$line" | jq -r '.delta.text // empty' 2>/dev/null)
+      if [ -n "$TEXT_DELTA" ]; then
+        echo -n "$TEXT_DELTA"
+      fi
+    elif [ "$MESSAGE_TYPE" = "tool_use" ]; then
+      # Show tool usage
+      TOOL_NAME=$(echo "$line" | jq -r '.name // empty' 2>/dev/null)
+      if [ -n "$TOOL_NAME" ]; then
+        echo ""
+        echo "  🔧 Using tool: $TOOL_NAME"
+      fi
+    elif [ "$MESSAGE_TYPE" = "tool_result" ]; then
+      # Tool completed
+      echo "  ✓ Tool completed"
+    elif [ "$MESSAGE_TYPE" = "error" ]; then
+      # Error occurred
+      ERROR_MSG=$(echo "$line" | jq -r '.error.message // empty' 2>/dev/null)
+      echo ""
+      echo "  ⚠️  Error: $ERROR_MSG"
+      AGENT_EXIT=1
+    fi
+  done
 
-# Display agent output
-echo "$AGENT_OUTPUT"
+# Add newline after streaming output
+echo ""
 echo ""
 
 # Check if agent succeeded
