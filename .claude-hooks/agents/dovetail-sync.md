@@ -60,23 +60,19 @@ Your task: [user's task description]
 🔍 Searching Linear for relevant issues...
 ```
 
-Then:
-1. Run: `linearis issue ls --team [TEAM] --json` and grep for keywords
-2. Show matching issues:
-   ```
-   Found relevant issues:
-   1. [KEY-123] - [Title] (Priority: High, Status: To Do)
-   2. [KEY-456] - [Title] (Priority: Medium, Status: To Do)
-   ```
-3. Ask user to confirm or create new:
+Then search for relevant issues by asking me to use Dovetail CLI commands.
+
+You should guide the user through:
+1. Tell them you're searching for relevant issues
+2. Ask them to confirm what they want to do:
    ```
    🤔 Should I:
-   1. Switch to one of these issues?
+   1. Search for an existing issue?
    2. Create a new issue for your task?
    3. Continue with current issue anyway?
    ```
 
-If user chooses 1 or 2, run: `dovetail start [ISSUE-KEY]`
+If user chooses 1 or 2, guide them to run: `dovetail check-issue` or `dovetail start [ISSUE-KEY]`
 
 ### Step 3: Verify/Create Branch
 Check if on correct branch:
@@ -137,29 +133,27 @@ git log --oneline --max-count=5
 ```
 
 ### Step 5: Get Live Issue Details from Linear
-If `linearis` is available:
+Get issue details from dovetail status:
 ```bash
-linearis issue show [ISSUE-KEY] --json
+dovetail status --json
 ```
 
-Print:
+Extract and display the active issue information:
 ```
 🎯 LINEAR ISSUE DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [KEY]: [Title]
 
-📊 Status: [state]
-🎯 Priority: [priority]
-👤 Assignee: [assignee]
-📅 Created: [date]
-🔗 URL: [linear-url]
-
-Description:
-[description preview]
+📊 Status: Active
+🌿 Branch: [branch-name]
+🔗 URL: [github-url]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+Note: The dovetail status command provides all necessary issue information.
+You don't need external CLI tools like linearis.
 
 ### Step 6: Final Validation
 Print final status:
@@ -199,17 +193,8 @@ Skipping workflow validation...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-If `linearis` CLI is not available:
-```
-⚠️  Linearis CLI not found (optional)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Install for better Linear integration:
-  npm install -g linearis
-
-Continuing without live Linear data...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+Note: You should ONLY use Dovetail CLI commands (`dovetail status`, `dovetail check-issue`, `dovetail start`).
+Do NOT attempt to use `linearis` or other external CLI tools.
 
 ## Example Complete Output
 
