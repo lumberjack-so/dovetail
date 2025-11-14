@@ -30,14 +30,14 @@ fi
 
 # Call check-issue command in auto mode
 # This will automatically select/create an issue and start it if needed
-echo "🎯 USER-PROMPT-SUBMIT: Checking for active issue..." >&2
+echo "🎯 USER-PROMPT-SUBMIT: Checking for active issue..."
 dovetail check-issue --auto
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
-  echo "✓ USER-PROMPT-SUBMIT: Issue check completed" >&2
+  echo "✓ USER-PROMPT-SUBMIT: Issue check completed"
 else
-  echo "✗ USER-PROMPT-SUBMIT: Issue check failed (exit $EXIT_CODE)" >&2
+  echo "✗ USER-PROMPT-SUBMIT: Issue check failed (exit $EXIT_CODE)"
 fi
 
 exit 0

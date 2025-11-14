@@ -39,14 +39,14 @@ fi
 
 # Call validate command
 # Exits 0 if valid, exits 2 to block operation
-echo "🔍 PRE-TOOL-USE: Validating project state..." >&2
+echo "🔍 PRE-TOOL-USE: Validating project state..."
 dovetail validate
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
-  echo "✓ PRE-TOOL-USE: Validation passed" >&2
+  echo "✓ PRE-TOOL-USE: Validation passed"
 else
-  echo "✗ PRE-TOOL-USE: Validation failed (exit $EXIT_CODE)" >&2
+  echo "✗ PRE-TOOL-USE: Validation failed (exit $EXIT_CODE)"
 fi
 
 exit $EXIT_CODE

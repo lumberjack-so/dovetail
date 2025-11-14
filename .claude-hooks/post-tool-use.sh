@@ -40,19 +40,19 @@ fi
 # Check if there are changes
 if git diff --quiet && git diff --cached --quiet; then
   # No changes - skip
-  echo "📝 POST-TOOL-USE: No changes to commit" >&2
+  echo "📝 POST-TOOL-USE: No changes to commit"
   exit 0
 fi
 
 # Call auto-commit command
-echo "📝 POST-TOOL-USE: Changes detected, auto-committing..." >&2
+echo "📝 POST-TOOL-USE: Changes detected, auto-committing..."
 dovetail auto-commit
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
-  echo "✓ POST-TOOL-USE: Auto-commit succeeded" >&2
+  echo "✓ POST-TOOL-USE: Auto-commit succeeded"
 else
-  echo "✗ POST-TOOL-USE: Auto-commit failed (exit $EXIT_CODE)" >&2
+  echo "✗ POST-TOOL-USE: Auto-commit failed (exit $EXIT_CODE)"
 fi
 
 exit 0
