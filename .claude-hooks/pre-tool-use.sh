@@ -47,98 +47,76 @@ fi
 
 cd "$PROJECT_ROOT" 2>/dev/null || exit 0
 
-# Check if claude CLI is available
-if ! command -v claude &> /dev/null; then
-  echo "⚠️  Claude CLI not found - cannot invoke dovetail-sync agent"
-  echo "   Falling back to basic validation..."
+# Check if dovetail CLI is available
+if ! command -v dovetail &> /dev/null; then
+  echo "⚠️  Dovetail CLI not found - validation skipped"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 0
+fi
+
+# Get current project status
+STATUS=$(dovetail status --json 2>/dev/null)
+if [ $? -ne 0 ]; then
+  echo "⚠️  Could not load project status"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 0
+fi
+
+PROJECT_NAME=$(echo "$STATUS" | jq -r '.name // "Unknown"')
+ACTIVE_ISSUE=$(echo "$STATUS" | jq -r '.activeIssue')
+CURRENT_BRANCH=$(echo "$STATUS" | jq -r '.branch // "unknown"')
+
+echo "📁 Project: $PROJECT_NAME"
+echo "🌿 Branch: $CURRENT_BRANCH"
+echo ""
+
+# Check if there's an active issue
+if [ "$ACTIVE_ISSUE" != "null" ]; then
+  ISSUE_KEY=$(echo "$ACTIVE_ISSUE" | jq -r '.key')
+  ISSUE_TITLE=$(echo "$ACTIVE_ISSUE" | jq -r '.title')
+
+  echo "🎯 Active Issue: $ISSUE_KEY - $ISSUE_TITLE"
   echo ""
 
-  # Fallback: just check if dovetail CLI exists and has active issue
-  if command -v dovetail &> /dev/null; then
-    STATUS=$(dovetail status --json 2>/dev/null)
-    if [ $? -eq 0 ]; then
-      ACTIVE_ISSUE=$(echo "$STATUS" | jq -r '.activeIssue')
-      if [ "$ACTIVE_ISSUE" != "null" ]; then
-        ISSUE_KEY=$(echo "$ACTIVE_ISSUE" | jq -r '.key')
-        echo "✓ Active issue: $ISSUE_KEY"
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        exit 0
-      fi
-    fi
-  fi
-
-  echo "⛔ No active issue - please run: dovetail check-issue"
+  # Basic validation passed - but prompt Claude to use dovetail-sync agent for full validation
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "⚠️  DOVETAIL WORKFLOW SYNC REQUIRED"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Before writing code, you MUST run the dovetail-sync agent to:"
+  echo "  • Verify task relevance to current issue"
+  echo "  • Ensure correct feature branch"
+  echo "  • Check git status and commit history"
+  echo "  • Validate Linear issue status"
+  echo ""
+  echo "🤖 REQUIRED ACTION:"
+  echo "   Use the dovetail-sync agent to validate workflow state"
+  echo ""
+  echo "   The agent will ensure everything is synced before allowing"
+  echo "   the $TOOL_NAME operation to proceed."
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # Block the operation - Claude must invoke the agent
   exit 2
-fi
-
-# Invoke dovetail-sync subagent
-echo "🤖 Invoking dovetail-sync subagent..."
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-# Create a prompt that includes context from the current conversation
-AGENT_PROMPT="A developer is about to use the $TOOL_NAME tool. Please perform Dovetail workflow synchronization:
-
-1. Check current project state (dovetail status, git status, branch)
-2. Verify the task is relevant to the active issue (or help find/create one)
-3. Ensure we're on the correct feature branch
-4. Show git status and recent commit history
-5. Get live issue details from Linear
-
-Be extremely verbose - print every step with clear formatting."
-
-# Load the agent prompt from the markdown file
-if [ -f "$PROJECT_ROOT/.claude/agents/dovetail-sync.md" ]; then
-  AGENT_SYSTEM_PROMPT=$(tail -n +7 "$PROJECT_ROOT/.claude/agents/dovetail-sync.md")
 else
-  echo "⚠️  Dovetail-sync agent definition not found"
-  echo "   Expected: $PROJECT_ROOT/.claude/agents/dovetail-sync.md"
+  # No active issue - block immediately
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "⛔ NO ACTIVE ISSUE"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Dovetail requires all code changes to be linked to a Linear issue."
+  echo ""
+  echo "🤖 REQUIRED ACTION:"
+  echo "   Use the dovetail-sync agent to find or create an issue"
+  echo ""
+  echo "   The agent will:"
+  echo "   • Search Linear for relevant issues"
+  echo "   • Let you select an existing issue"
+  echo "   • Or create a new issue if needed"
+  echo "   • Set up the correct feature branch"
+  echo ""
+  echo "⛔ $TOOL_NAME operation BLOCKED until issue is selected"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   exit 2
 fi
-
-# Run the subagent using claude CLI in verbose mode
-# Use text output format for immediate visibility
-set -o pipefail
-
-claude --print \
-  --max-turns 50 \
-  --verbose \
-  --add-dir "$PROJECT_ROOT" \
-  --agents "{
-    \"dovetail-sync\": {
-      \"description\": \"Dovetail workflow sync agent\",
-      \"prompt\": $(echo "$AGENT_SYSTEM_PROMPT" | jq -Rs .),
-      \"tools\": [\"Read\", \"Bash\", \"Grep\", \"Glob\"],
-      \"model\": \"sonnet\"
-    }
-  }" \
-  "$AGENT_PROMPT" 2>&1
-
-AGENT_EXIT=$?
-
-# Add newline after agent output
-echo ""
-echo ""
-
-# Check if agent succeeded
-if [ $AGENT_EXIT -eq 0 ]; then
-  # Verify the agent actually fixed the issue
-  FINAL_STATUS=$(dovetail status --json 2>/dev/null)
-  FINAL_ISSUE=$(echo "$FINAL_STATUS" | jq -r '.activeIssue')
-
-  if [ "$FINAL_ISSUE" != "null" ]; then
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "✅ Dovetail sync complete - proceeding with $TOOL_NAME operation"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    exit 0
-  fi
-fi
-
-# Agent failed or didn't resolve the issue
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "⛔ Dovetail sync failed - $TOOL_NAME operation BLOCKED"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-exit 2
