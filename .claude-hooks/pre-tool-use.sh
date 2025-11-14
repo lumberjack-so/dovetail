@@ -2,6 +2,9 @@
 # Dovetail 2.0 - Pre Tool Use Hook
 # Invokes dovetail-sync subagent to validate workflow state before Write/Edit operations
 
+# Redirect all output to stderr so Claude Code sees it
+exec 1>&2
+
 # Read JSON input from stdin
 INPUT=$(cat)
 
